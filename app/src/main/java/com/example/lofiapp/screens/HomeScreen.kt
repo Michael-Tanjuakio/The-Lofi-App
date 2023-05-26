@@ -1,43 +1,27 @@
 package com.example.lofiapp.screens
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.example.lofiapp.R
+import com.example.lofiapp.data.MenuAction
+import com.example.lofiapp.data.ScreenRoutes
 import com.example.lofiapp.ui.theme.LofiappTheme
 import com.example.lofiapp.ui.theme.flamenco_regular
 
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            LofiappTheme {
-                // A surface container using the 'background' color from the theme
-                Surface(
-                    color = MaterialTheme.colors.background
-                ) {
-                    displayScreen(
-                        stringResource(R.string.app_name),
-                        stringResource(R.string.Search)
-                    )
-                }
-            }
-        }
-    }
-}
-
 @Composable
-fun displayScreen(title: String, search: String) {
-    var text by remember { mutableStateOf("")}
+fun HomeScreen(title: String, search: String, navController: NavController) {
+    var text by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier.fillMaxSize()
@@ -46,10 +30,18 @@ fun displayScreen(title: String, search: String) {
             title = {
                 Text(text = title, color = Color.White, fontFamily = flamenco_regular, fontSize = 32.sp)
             },
-            backgroundColor = Color(0xFF24CAAC)
+            backgroundColor = Color(0xFF24CAAC),
+            actions = {
+                IconButton(onClick = { navController.navigate(ScreenRoutes.SearchScreen.route)}) {
+                    Icon(imageVector = MenuAction.Search.icon,
+                        contentDescription = stringResource(MenuAction.Search.label),
+                        tint = Color.White,
+                        modifier = Modifier.size(30.dp)
+                            .padding(top = 5.dp)
+                    )
+                }
+            }
         )
-
-
     }
 }
 
@@ -57,10 +49,10 @@ fun displayScreen(title: String, search: String) {
 @Composable
 fun DefaultPreview() {
     LofiappTheme {
-        displayScreen(
-            stringResource(R.string.app_name),
-            stringResource(R.string.Search)
-        );
+//        HomeScreen(
+//            stringResource(R.string.app_name),
+//            stringResource(R.string.Search)
+//        );
     }
 }
 
