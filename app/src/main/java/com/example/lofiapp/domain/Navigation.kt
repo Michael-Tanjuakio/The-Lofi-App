@@ -14,14 +14,14 @@ import com.example.lofiapp.screens.SearchScreen
 fun Navigation() {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = ScreenRoutes.HomeScreen.route) {
-        composable(route = ScreenRoutes.HomeScreen.route) {
+        composable(route = ScreenRoutes.HomeScreen.route) { // home screen
             HomeScreen(
                 stringResource(R.string.app_name),
                 stringResource(R.string.Search),
                 navController
             )
         }
-        composable(route = ScreenRoutes.SearchScreen.route) {
+        composable(route = ScreenRoutes.SearchScreen.route) {// search screen
             SearchScreen(navController = navController)
         }
     }

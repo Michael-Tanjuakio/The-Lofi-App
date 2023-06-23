@@ -30,3 +30,5 @@ val Typography = Typography(
 )
 
 val flamenco_regular = FontFamily(Font(R.font.flamenco_regular))
+val montserrat_bold = FontFamily(Font(R.font.montserrat_bold))
+val montserrat_light = FontFamily(Font(R.font.montserrat_light))

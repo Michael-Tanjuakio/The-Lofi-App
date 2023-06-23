@@ -10,15 +10,15 @@ import com.example.lofiapp.screens.HomeScreen
 import com.example.lofiapp.ui.theme.LofiappTheme
 
 class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onCreate(savedInstanceState: Bundle?) { // when mainActivity is created (user opens app)
+        super.onCreate(savedInstanceState) // original function (super keyword)
         setContent {
             LofiappTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     color = MaterialTheme.colors.background
                 ) {
-                    Navigation()
+                    Navigation() // what is called
                 }
             }
         }
