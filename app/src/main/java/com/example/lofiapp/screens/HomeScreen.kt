@@ -178,7 +178,8 @@ fun HomeScreen(title: String, search: String, navController: NavController) {
         // Bottom bar
         BottomAppBar(
             modifier = Modifier
-                        .padding(top = 70.dp),
+                        .padding(top = 50.dp)
+                        .size(1000.dp),
             backgroundColor = Color(0xFF3392EA)) {
             Image(  painter = painterResource(R.drawable.play_circle_icon),
                     contentDescription = null,
