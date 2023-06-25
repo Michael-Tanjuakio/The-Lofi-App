@@ -46,8 +46,8 @@ fun HomeScreen(title: String, search: String, navController: NavController) {
     val scrollState = rememberScrollState() // vertically scrollable
     Column(
         modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(state = scrollState)
+            .fillMaxSize()
+            .verticalScroll(state = scrollState)
     ) {
         // Top Bar
         TopAppBar(
@@ -156,10 +156,10 @@ fun HomeScreen(title: String, search: String, navController: NavController) {
                         )
                         Box( // Transparent background
                             modifier = Modifier
-                                            .size(width = 105.dp, height = 134.dp)
-                                            .clip(RoundedCornerShape(0.dp, 15.dp, 15.dp, 0.dp))
-                                            .background(Color(0xFF404040).copy(alpha = 0.6f))
-                                            .align(alignment = Alignment.TopEnd)) {
+                                .size(width = 105.dp, height = 134.dp)
+                                .clip(RoundedCornerShape(0.dp, 15.dp, 15.dp, 0.dp))
+                                .background(Color(0xFF404040).copy(alpha = 0.6f))
+                                .align(alignment = Alignment.TopEnd)) {
                             Text( // Number of videos in playlist
                                 text = "5",
                                 modifier = Modifier
@@ -222,14 +222,14 @@ fun HomeScreen(title: String, search: String, navController: NavController) {
                         .clip(RoundedCornerShape(12))
                 )
                 Box(modifier = Modifier
-                                    .size(width = 140.dp, height = 53.dp)
-                                    .padding(top = 3.dp)) {
+                    .size(width = 140.dp, height = 53.dp)
+                    .padding(top = 3.dp)) {
                     Text( // video nam
                         text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
                         fontFamily = montserrat_bold,
                         color = Color.White,
                         modifier = Modifier.padding(start = 12.dp)
-                                    .fillMaxSize(),
+                            .fillMaxSize(),
                         fontSize = 10.sp
                     )
                 }
@@ -238,12 +238,14 @@ fun HomeScreen(title: String, search: String, navController: NavController) {
                 painter = painterResource(R.drawable.play_circle_icon),
                 contentDescription = null,
                 modifier = Modifier
-                                .padding(top = 4.dp,end = 16.dp)
-                                .size(45.dp),
+                    .padding(top = 4.dp,end = 16.dp)
+                    .size(45.dp),
                 colorFilter = ColorFilter.tint(color = Color.White)
             )
         }
     }
+
+
 }
 
 @Preview(showBackground = true)
