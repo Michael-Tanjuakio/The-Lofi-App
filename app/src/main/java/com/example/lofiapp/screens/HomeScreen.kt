@@ -1,12 +1,14 @@
 package com.example.lofiapp.screens
 
 import androidx.compose.foundation.Canvas
-
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,35 +31,40 @@ import com.example.lofiapp.ui.theme.LofiappTheme
 import com.example.lofiapp.ui.theme.flamenco_regular
 import com.example.lofiapp.ui.theme.montserrat_bold
 import com.example.lofiapp.ui.theme.montserrat_light
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.res.imageResource
 
 data class videoDisplay(var videoTitle:String)
 
 @Composable
 fun HomeScreen(title: String, search: String, navController: NavController) {
 
-    val list = listOf("1","1","1","1")
-
-    val video_id = "jfKfPfyJRdk"
-    val fullsize_path_img:String = "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // Display video thumbnail
-
+    val list = listOf("1","1","1","1") // placeholder
+    val video_id = "jfKfPfyJRdk" // video-id example
+    val fullsize_path_img:String = "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
     var text by remember { mutableStateOf("") }
 
     // Whole UI
+    val scrollState = rememberScrollState() // vertically scrollable
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(state = scrollState)
     ) {
         // Top Bar
         TopAppBar(
             title = {
-                Text(text = title, color = Color.White, fontFamily = flamenco_regular, fontSize = 32.sp)
+                Text(
+                    text = title,
+                    color = Color.White,
+                    fontFamily = flamenco_regular,
+                    fontSize = 32.sp
+                )
             },
             backgroundColor = Color(0xFF24CAAC),
             actions = {
                 // Search Button
-                IconButton(onClick = { navController.navigate(ScreenRoutes.SearchScreen.route)}) { // change this
-                    Icon(imageVector = MenuAction.Search.icon,
+                IconButton(onClick = { navController.navigate(ScreenRoutes.SearchScreen.route) }) {
+                    Icon(
+                        imageVector = MenuAction.Search.icon,
                         contentDescription = stringResource(MenuAction.Search.label),
                         tint = Color.White,
                         modifier = Modifier
@@ -68,7 +75,7 @@ fun HomeScreen(title: String, search: String, navController: NavController) {
             }
         )
 
-        // Recommended Title
+        // Recommended Text
         Row(modifier = Modifier.padding(top = 45.dp, start = 30.dp)) {
             Text(
                 text = "Recommended",
@@ -77,20 +84,21 @@ fun HomeScreen(title: String, search: String, navController: NavController) {
                 fontSize = 21.sp,
                 fontFamily = montserrat_bold
             )
-            Image(  painter = painterResource(id = R.drawable.video_library_icon),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(34.dp)
-                        .padding(start = 2.dp),
+            Image( // Symbol
+                painter = painterResource(id = R.drawable.video_library_icon),
+                contentDescription = null,
+                modifier = Modifier
+                    .padding(start = 10.dp)
+                    .size(34.dp),
                 colorFilter = ColorFilter.tint(color = Color(0xFF5686E1))
             )
         }
 
         // Recommended Videos Display (horz. scroll)
-        LazyRow(modifier = Modifier.padding(start = 13.dp)) {
+        LazyRow(modifier = Modifier.padding(start = 13.dp, top = 6.dp)) {
             items(items = list, itemContent = { item ->
-                Column() {
-                    AsyncImage(
+                Column() { // Video Display
+                    AsyncImage( // Video thumbnail
                         model = fullsize_path_img,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
@@ -99,7 +107,7 @@ fun HomeScreen(title: String, search: String, navController: NavController) {
                             .size(width = 220.dp, height = 134.dp)
                             .clip(RoundedCornerShape(12))
                     )
-                    Text(
+                    Text( // Video name
                         text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
                         maxLines = 2,
                         modifier = Modifier
@@ -113,7 +121,7 @@ fun HomeScreen(title: String, search: String, navController: NavController) {
             })
         }
 
-        // Playlists title
+        // Playlists Text
         Row(modifier = Modifier.padding(top = 30.dp, start = 29.dp)) {
             Text(
                 text = "Playlists",
@@ -122,30 +130,47 @@ fun HomeScreen(title: String, search: String, navController: NavController) {
                 fontSize = 21.sp,
                 fontFamily = montserrat_bold
             )
-            Image(  painter = painterResource(id = R.drawable.playlist_icon),
-                    contentDescription = null,
-                    modifier = Modifier
-                                .padding(start = 5.dp)
-                                .size(34.dp),
-                    colorFilter = ColorFilter.tint(color = Color(0xFF5686E1))
+            Image( // Symbol
+                painter = painterResource(id = R.drawable.playlist_icon),
+                contentDescription = null,
+                modifier = Modifier
+                    .padding(start = 10.dp)
+                    .size(34.dp),
+                colorFilter = ColorFilter.tint(color = Color(0xFF5686E1))
             )
         }
 
         // Playlists display (horz. scroll)
-        LazyRow(modifier = Modifier.padding(start = 13.dp)) {
+        LazyRow(modifier = Modifier.padding(start = 13.dp, top = 6.dp)) {
             items(items = list, itemContent = { item ->
                 Column() {
-                    AsyncImage(
-                        model = fullsize_path_img,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .padding(start = 16.dp)
-                            .size(width = 220.dp, height = 134.dp)
-                            .clip(RoundedCornerShape(12))
-                    )
-                    Text(
-                        text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
+                    Box() {
+                        AsyncImage( // Video Thumbnail
+                            model = fullsize_path_img,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .padding(start = 16.dp)
+                                .size(width = 220.dp, height = 134.dp)
+                                .clip(RoundedCornerShape(12))
+                        )
+                        Box( // Transparent background
+                            modifier = Modifier
+                                            .size(width = 105.dp, height = 134.dp)
+                                            .clip(RoundedCornerShape(0.dp, 15.dp, 15.dp, 0.dp))
+                                            .background(Color(0xFF404040).copy(alpha = 0.6f))
+                                            .align(alignment = Alignment.TopEnd)) {
+                            Text( // Number of videos in playlist
+                                text = "5",
+                                modifier = Modifier
+                                    .align(alignment = Alignment.Center),
+                                color = Color.White,
+                                fontFamily = montserrat_light
+                            )
+                        }
+                    }
+                    Text( // Playlist Name
+                        text = "city pop playlist",
                         maxLines = 2,
                         modifier = Modifier
                             .padding(start = 16.dp)
@@ -159,37 +184,63 @@ fun HomeScreen(title: String, search: String, navController: NavController) {
         }
 
         // Random video button
-        Canvas(modifier = Modifier
-            .size(size = 70.dp)
-            .padding(top = 93.dp)
-            .align(Alignment.CenterHorizontally)) {
-            drawCircle(
+        Canvas(
+            modifier = Modifier
+                .size(size = 70.dp)
+                .padding(top = 93.dp)
+                .align(Alignment.CenterHorizontally)
+        ) {
+            drawCircle( // green circle background
                 color = Color(0xFF24CAAC),
-                radius = 40.dp.toPx())
+                radius = 40.dp.toPx()
+            )
         }
-        Image(
+        Image( // shuffle symbol
             painter = painterResource(id = R.drawable.shuffle_icon),
             contentDescription = null,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
+            modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .padding(bottom = 50.dp),
             colorFilter = ColorFilter.tint(color = Color.White)
         )
 
+        Spacer(modifier = Modifier.weight(1f)) // aligns last element in bottom of screen
 
-        // Bottom bar
-        BottomAppBar(
-            modifier = Modifier
-                        .padding(top = 50.dp)
-                        .size(1000.dp),
-            backgroundColor = Color(0xFF3392EA)) {
-            Image(  painter = painterResource(R.drawable.play_circle_icon),
+        // Bottom bar (Displays what video is played)
+        BottomNavigation(
+            modifier = Modifier,
+            backgroundColor = Color(0xFF3392EA)
+        ) {
+            Row() { // wrap in row to avoid default spacing
+                AsyncImage( // video thumbnail
+                    model = fullsize_path_img,
                     contentDescription = null,
-                    modifier = Modifier.size(35.dp),
-                    colorFilter = ColorFilter.tint(color = Color.White)
-            )
-            Text(   text = "insert_video playing... ",
-                    fontFamily = montserrat_bold,
-                    color = Color.White,
-                    modifier = Modifier.padding(start = 5.dp)
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .padding(start = 16.dp, top = 6.dp)
+                        .size(width = 65.dp, height = 43.dp)
+                        .clip(RoundedCornerShape(12))
+                )
+                Box(modifier = Modifier
+                                    .size(width = 140.dp, height = 53.dp)
+                                    .padding(top = 3.dp)) {
+                    Text( // video nam
+                        text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
+                        fontFamily = montserrat_bold,
+                        color = Color.White,
+                        modifier = Modifier.padding(start = 12.dp)
+                                    .fillMaxSize(),
+                        fontSize = 10.sp
+                    )
+                }
+            }
+            Image( // play icon (note: make this a button)
+                painter = painterResource(R.drawable.play_circle_icon),
+                contentDescription = null,
+                modifier = Modifier
+                                .padding(top = 4.dp,end = 16.dp)
+                                .size(45.dp),
+                colorFilter = ColorFilter.tint(color = Color.White)
             )
         }
     }
