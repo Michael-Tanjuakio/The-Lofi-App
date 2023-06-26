@@ -6,6 +6,7 @@ sealed class ScreenRoutes(val route: String) {
     object VideoScreen: ScreenRoutes("video_screen")
     object PlaylistScreen: ScreenRoutes("playlist_screen")
 
-    object YoutubeScreen: ScreenRoutes("youtube_screen")
+    object EditPlaylistScreen: ScreenRoutes("edit_playlist_screen")
+
 
 }
