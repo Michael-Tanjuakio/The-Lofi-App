@@ -15,10 +15,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.BottomNavigation
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
@@ -31,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,6 +67,7 @@ fun SearchScreen(navController: NavController) {
     val fullsize_path_img =
         "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
     var text by remember { mutableStateOf("") }
+    val scrollState = rememberScrollState() // vertically scrollable
 
     Scaffold(
         topBar = {
@@ -123,7 +127,7 @@ fun SearchScreen(navController: NavController) {
                                         tint = Color.Black.copy(alpha = 0.5f),
                                         modifier = Modifier
                                             .size(30.dp)
-                                            .padding(bottom = 2.dp, end = 0.dp)
+                                            .padding(bottom = 2.dp)
                                     )
                                     Text(
                                         // search placeholder
@@ -143,44 +147,44 @@ fun SearchScreen(navController: NavController) {
             }
         },
         content = { padding ->
-            // Diaplyed Videos
-            Column(modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 20.dp)) {
-                // Searched Videos Display (vertical. scroll)
-                LazyColumn(modifier = Modifier.align(CenterHorizontally)) {
-                    items(items = list, itemContent = { item ->
-                        Column(
-                            modifier = Modifier
-                                .padding(bottom = 20.dp)
-                                .clip(RoundedCornerShape(12, 12, 5, 5))
-                                .clickable {
-                                    navController.navigate(ScreenRoutes.VideoScreen.route)
-                                }
-                        ) { // Video Display
-                            AsyncImage( // Video thumbnail
-                                model = fullsize_path_img,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(width = 270.dp, height = 140.dp)
-                                    .clip(RoundedCornerShape(12))
-                                    .align(CenterHorizontally)
-                            )
-                            Text( // Video name
-                                text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
-                                maxLines = 2,
-                                modifier = Modifier
-                                    .padding(start = 2.dp)
-                                    .width(278.dp)
-                                    .height(IntrinsicSize.Max)
-                                    .align(CenterHorizontally),
-                                fontSize = 16.sp,
-                                fontFamily = montserrat_light
-                            )
+            // Searched Videos Display (vertical. scroll)
+            LazyColumn(modifier = Modifier.padding(top = 20.dp, bottom = 50.dp)) {
+                items(items = list, itemContent = { item ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 20.dp)
+                    ) { // Video Display
+                        Box(modifier = Modifier
+                            .clip(RoundedCornerShape(12, 12, 5, 5))
+                            .align(CenterHorizontally)
+                            .clickable {
+                                navController.navigate(ScreenRoutes.VideoScreen.route)
+                            }
+                        ) {
+                            Column() {
+                                AsyncImage( // Video thumbnail
+                                    model = fullsize_path_img,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(width = 270.dp, height = 140.dp)
+                                        .clip(RoundedCornerShape(12))
+                                )
+                                Text( // Video name
+                                    text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
+                                    maxLines = 2,
+                                    modifier = Modifier
+                                        .padding(start = 0.dp, top = 2.dp)
+                                        .width(270.dp)
+                                        .height(IntrinsicSize.Max),
+                                    fontSize = 16.sp,
+                                    fontFamily = montserrat_light
+                                )
+                            }
                         }
-                    })
-                }
+                    }
+                })
             }
         },
         bottomBar = {

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.BottomNavigation
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.IconButton
@@ -126,8 +127,9 @@ fun PlaylistScreen(navController: NavController) {
                         fontFamily = montserrat_bold,
                         color = Color.White,
                         modifier = Modifier
-                            .padding(start = 5.dp)
-                            .size(width = 150.dp, height = 50.dp)
+                            .padding(start = 5.dp, top = 2.dp)
+                            .size(width = 150.dp, height = 50.dp),
+                        fontSize = 15.sp
                         //.border(border = BorderStroke(2.dp, Color.Red)),
                     )
                 }
@@ -135,50 +137,105 @@ fun PlaylistScreen(navController: NavController) {
             }
         },
         content = { padding ->
-            // Diaplyed Videos
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 20.dp)
-            ) {
-                // Searched Videos Display (vertical. scroll)
-                LazyColumn(modifier = Modifier.align(CenterHorizontally)) {
-                    items(items = list, itemContent = { item ->
-                        Row(
-                            modifier = Modifier
-                                .padding(start = 0.dp, bottom = 10.dp)
-                                .clip(RoundedCornerShape(12, 12, 5, 5))
-                                .clickable {
-                                    navController.navigate(ScreenRoutes.VideoScreen.route)
-                                }
-                        ) { // Video Display
-                            AsyncImage( // Video thumbnail
-                                model = fullsize_path_img,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
+            // Searched Videos Display (vertical. scroll)
+            LazyColumn(modifier = Modifier.padding(top = 20.dp, bottom = 55.dp)) {
+                items(items = list, itemContent = { item ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                    ) {
+                        Box(modifier = Modifier
+                            .clip(RoundedCornerShape(12, 12, 5, 5))
+                            .align(CenterHorizontally)
+                            .clickable {
+                                navController.navigate(ScreenRoutes.VideoScreen.route)
+                            }
+                        ) {
+                            Row(
                                 modifier = Modifier
-                                    .size(width = 140.dp, height = 87.dp)
-                                    .clip(RoundedCornerShape(12))
-                                    .align(CenterVertically)
+                                    .padding(start = 0.dp, bottom = 10.dp)
+                                    .clip(RoundedCornerShape(12, 12, 5, 5))
                                     .clickable {
                                         navController.navigate(ScreenRoutes.VideoScreen.route)
                                     }
-                            )
-                            Text( // Video name
-                                text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
-                                maxLines = 4,
-                                modifier = Modifier
-                                    .padding(start = 8.dp)
-                                    .width(130.dp)
-                                    .height(80.dp)
-                                    .align(CenterVertically),
-                                //.border(border = BorderStroke(2.dp, Color.Red)),
-                                fontSize = 13.sp,
-                                fontFamily = montserrat_light
-                            )
+                            ) { // Video Display
+                                AsyncImage( // Video thumbnail
+                                    model = fullsize_path_img,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(width = 140.dp, height = 87.dp)
+                                        .clip(RoundedCornerShape(12))
+                                        .align(CenterVertically)
+                                        .clickable {
+                                            navController.navigate(ScreenRoutes.VideoScreen.route)
+                                        }
+                                )
+                                Text( // Video name
+                                    text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
+                                    maxLines = 4,
+                                    modifier = Modifier
+                                        .padding(start = 8.dp)
+                                        .width(130.dp)
+                                        .height(80.dp)
+                                        .align(CenterVertically),
+                                    //.border(border = BorderStroke(2.dp, Color.Red)),
+                                    fontSize = 13.sp,
+                                    fontFamily = montserrat_light
+                                )
+                            }
                         }
-                    })
+                    }
+                })
+            }
+        },
+        bottomBar = {
+            // Bottom bar (Displays what video is played)
+            BottomNavigation(
+                modifier = Modifier
+                    .clickable {
+                        navController.navigate(ScreenRoutes.VideoScreen.route)
+                    },
+                backgroundColor = Color(0xFF3392EA)
+            ) {
+                Row() { // wrap in row to avoid default spacing
+                    AsyncImage( // video thumbnail
+                        model = fullsize_path_img,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .padding(start = 16.dp, top = 6.dp)
+                            .size(width = 65.dp, height = 43.dp)
+                            .clip(RoundedCornerShape(12))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(width = 140.dp, height = 53.dp)
+                            .padding(top = 3.dp)
+                    ) {
+                        Text( // video name
+                            text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
+                            fontFamily = montserrat_bold,
+                            color = Color.White,
+                            modifier = Modifier
+                                .padding(start = 12.dp)
+                                .fillMaxSize(),
+                            fontSize = 10.sp
+                        )
+                    }
                 }
+                Image( // play icon (note: make this a button)
+                    painter = painterResource(R.drawable.play_circle_icon),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .padding(top = 4.dp, end = 16.dp)
+                        .size(45.dp)
+                        .clip(RoundedCornerShape(75, 75, 75, 75))
+                        .clickable {
+                            navController.navigate(ScreenRoutes.VideoScreen.route)
+                        },
+                    colorFilter = ColorFilter.tint(color = Color.White)
+                )
             }
         }
     )

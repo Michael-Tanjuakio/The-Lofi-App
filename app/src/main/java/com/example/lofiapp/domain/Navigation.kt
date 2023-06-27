@@ -27,14 +27,15 @@ fun Navigation() {
         composable(route = ScreenRoutes.SearchScreen.route) {// search screen
             SearchScreen(navController = navController)
         }
-        composable(route = ScreenRoutes.VideoScreen.route) {
+        composable(route = ScreenRoutes.VideoScreen.route) { // video screen
             VideoScreen(navController = navController)
         }
-        composable(route = ScreenRoutes.PlaylistScreen.route) {
+        composable(route = ScreenRoutes.PlaylistScreen.route) {// Playlist screen
             PlaylistScreen(navController = navController)
         }
-        composable(route = ScreenRoutes.EditPlaylistScreen.route) {
+        composable(route = ScreenRoutes.EditPlaylistScreen.route) {// Edit playlist screen
             EditPlaylistScreen(navController = navController)
         }
     }
 }
+
