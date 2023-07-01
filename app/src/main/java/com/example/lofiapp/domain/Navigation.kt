@@ -28,7 +28,7 @@ fun Navigation() {
             SearchScreen(navController = navController)
         }
         composable(route = ScreenRoutes.VideoScreen.route) { // video screen
-            VideoScreen(navController = navController)
+            VideoScreen(navController = navController, video_id = "jfKfPfyJRdk")
         }
         composable(route = ScreenRoutes.PlaylistScreen.route) {// Playlist screen
             PlaylistScreen(navController = navController)

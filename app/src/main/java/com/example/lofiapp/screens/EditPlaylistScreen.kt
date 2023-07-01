@@ -2,23 +2,21 @@ package com.example.lofiapp.screens
 
 import android.util.Log
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -28,37 +26,40 @@ import androidx.compose.material.BottomNavigation
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.IconButton
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.view.OneShotPreDrawListener.add
+import androidx.core.graphics.component1
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.lofiapp.R
@@ -66,19 +67,29 @@ import com.example.lofiapp.data.ScreenRoutes
 import com.example.lofiapp.ui.theme.flamenco_regular
 import com.example.lofiapp.ui.theme.montserrat_bold
 import com.example.lofiapp.ui.theme.montserrat_light
+import org.burnoutcrew.reorderable.ReorderableItem
+import org.burnoutcrew.reorderable.detectReorderAfterLongPress
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
-import kotlin.math.roundToInt
+import org.burnoutcrew.reorderable.reorderable
+import java.util.Collections
+import java.util.Collections.list
+
 
 @Composable
 fun EditPlaylistScreen(navController: NavController) {
 
-    val list = remember { mutableStateListOf("1", "2", "3") } // placeholder
+    //val list = remember { mutableStateListOf<String>("1", "2", "3") } // placeholder
+    var list = remember { mutableStateOf(listOf("abc 1", "letter 2", "sing 3", "thai 4","five 5", "big 6",)) }
 
+    val state = rememberReorderableLazyListState(onMove = { from, to ->
+        list.value = list.value.toMutableList().apply {
+            add(to.index, removeAt(from.index))
+        }
+    })
 
     val video_id = "jfKfPfyJRdk" // video-id example
     val fullsize_path_img =
         "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
-
 
     var text by remember { mutableStateOf("Playlist of the Century") }
 
@@ -86,6 +97,7 @@ fun EditPlaylistScreen(navController: NavController) {
     var openNoTitleDialog by remember { mutableStateOf(false) } // no title dialog popup
     var openDeleteVideoDialog by remember { mutableStateOf(false) } // delete video dialog popup
     var deleteVideo by remember { mutableStateOf(false) } // delete video dialog popup
+    var index by remember { mutableStateOf(0) } // delete video dialog popup
 
 
     Scaffold(
@@ -185,94 +197,90 @@ fun EditPlaylistScreen(navController: NavController) {
             LazyColumn(
                 modifier = Modifier
                     .padding(top = 20.dp, bottom = 55.dp)
-                    //.background(Color.Red)
+                    .reorderable(state)
+                    .detectReorderAfterLongPress(state),
+                state = state.listState,
             ) {
-                itemsIndexed(list) { index, item ->
-                    var offsetX by remember { mutableStateOf(0f) }
-                    var offsetY by remember { mutableStateOf(0f) }
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                    ) {
-                        Box(modifier = Modifier
-                            .clip(RoundedCornerShape(12, 12, 5, 5))
-                            .align(CenterHorizontally)
-                            .clickable {
-                                navController.navigate(ScreenRoutes.VideoScreen.route)
-                            }
-                            .background(Color.Magenta)
+                items(list.value, {it}) { item ->
+                    ReorderableItem(state, key = item) { isDragging ->
+                        val elevation = animateDpAsState(if (isDragging) 16.dp else 0.dp)
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
                         ) {
-                            Row(
+                            Box(
                                 modifier = Modifier
-                                    .padding(start = 0.dp, bottom = 10.dp)
                                     .clip(RoundedCornerShape(12, 12, 5, 5))
-                                    .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
-                                    .clickable {
-                                        navController.navigate(ScreenRoutes.VideoScreen.route)
-                                    }
-                                    .background(Color.Transparent)
-                            ) { // Video Display
-                                // edit list button
-                                Image(
-                                    painter = painterResource(id = R.drawable.reorder_icon),
-                                    contentDescription = null,
-                                    colorFilter = ColorFilter.tint(color = Color.Black),
+                                    .align(CenterHorizontally)
+                            ) {
+                                Row(
                                     modifier = Modifier
-                                        .size(35.dp)
-                                        .align(CenterVertically)
-                                        .padding(end = 10.dp)
-                                        .clickable {
-                                            openDeleteVideoDialog = true
-                                        }
-                                        .pointerInput(Unit) {
-                                            detectDragGestures { change, dragAmount ->
-                                                change.consume()
-                                                offsetY += dragAmount.y
-                                            }
-                                        }
-                                )
-                                AsyncImage( // Video thumbnail
-                                    model = fullsize_path_img,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .size(width = 140.dp, height = 87.dp)
-                                        .clip(RoundedCornerShape(12))
-                                        .align(CenterVertically)
-                                        .clickable {
-                                            navController.navigate(ScreenRoutes.VideoScreen.route)
-                                        }
+                                        .padding(start = 0.dp, bottom = 10.dp)
+                                        .clip(RoundedCornerShape(12, 12, 5, 5))
                                         .background(Color.Transparent)
-                                )
-                                Text( // Video name
-                                    text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
-                                    maxLines = 4,
-                                    modifier = Modifier
-                                        .padding(start = 8.dp)
-                                        .width(90.dp)
-                                        .height(80.dp)
-                                        .align(CenterVertically),
-                                    //.border(border = BorderStroke(2.dp, Color.Red)),
-                                    fontSize = 13.sp,
-                                    fontFamily = montserrat_light
-                                )
-                                // delete video button
-                                Image(
-                                    painter = painterResource(id = R.drawable.delete_video_icon),
-                                    contentDescription = null,
-                                    colorFilter = ColorFilter.tint(color = Color.Black),
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .align(CenterVertically)
-                                        .clip(RoundedCornerShape(12))
-                                        .clickable {
-                                            openDeleteVideoDialog = true
-                                        }
-                                )
-                                Log.d("deleteVideo", deleteVideo.toString())
-                                if (deleteVideo) {
-                                    list.remove(item)
-                                    deleteVideo = false
+                                ) { // Video Display
+                                    // edit list button
+                                    Image(
+                                        painter = painterResource(id = R.drawable.reorder_icon),
+                                        contentDescription = null,
+                                        colorFilter = ColorFilter.tint(color = Color.Black),
+                                        modifier = Modifier
+                                            .size(35.dp)
+                                            .align(CenterVertically)
+                                            .padding(end = 10.dp)
+                                    )
+                                    AsyncImage( // Video thumbnail
+                                        model = fullsize_path_img,
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(width = 140.dp, height = 87.dp)
+                                            .clip(RoundedCornerShape(12))
+                                            .align(CenterVertically)
+                                            .background(Color.Transparent)
+                                    )
+                                    Text( // Video name
+                                        //  "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
+                                        text = "video " + item,
+                                        maxLines = 4,
+                                        modifier = Modifier
+                                            .padding(start = 8.dp)
+                                            .width(90.dp)
+                                            .height(80.dp)
+                                            .align(CenterVertically),
+                                        //.border(border = BorderStroke(2.dp, Color.Red)),
+                                        fontSize = 13.sp,
+                                        fontFamily = montserrat_light
+                                    )
+                                    // delete video button
+                                    Image(
+                                        painter = painterResource(id = R.drawable.delete_video_icon),
+                                        contentDescription = null,
+                                        colorFilter = ColorFilter.tint(color = Color.Black),
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .align(CenterVertically)
+                                            .clip(RoundedCornerShape(12))
+                                            .clickable {
+                                                index = list.component1().indexOf(item)
+                                                Log.d(
+                                                    "deleteVideo",
+                                                    "finding " + index
+                                                )
+                                                openDeleteVideoDialog = true
+                                            }
+                                    )
+                                    if (deleteVideo) { // deletes video
+
+                                        Log.d(
+                                            "deleteVideo",
+                                            "removed index " + index + " " + list.value[index] + "\n" + list.value.subList(0,index) + " " + list.value.subList(index+1,list.value.size)
+                                        )
+                                        list.value = list.value.subList(0,index) + list.value.subList(index+1,list.value.size)
+                                        deleteVideo = false
+                                    }
+
                                 }
                             }
                         }
@@ -564,7 +572,11 @@ fun EditPlaylistScreen(navController: NavController) {
             openNoTitleDialog = true
         })
     }
+
+
 }
+
+
 
 
 

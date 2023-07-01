@@ -74,8 +74,6 @@ dependencies {
     implementation "io.coil-kt:coil-compose:2.4.0"
 
     // Reorder Implementation
-    dependencies {
-        implementation('org.burnoutcrew.composereorderable:reorderable:0.9.6')
-    }
+    implementation("org.burnoutcrew.composereorderable:reorderable:0.9.6")
 
 }
