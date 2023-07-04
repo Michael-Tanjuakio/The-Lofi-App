@@ -56,6 +56,8 @@ dependencies {
     implementation 'androidx.compose.material:material:1.2.0'
     implementation 'com.google.firebase:firebase-crashlytics-buildtools:2.8.1'
     implementation 'androidx.compose.foundation:foundation-android:+'
+    implementation 'androidx.recyclerview:recyclerview:1.2.1'
+    implementation 'androidx.media3:media3-exoplayer:1.0.0-alpha03'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
@@ -75,5 +77,11 @@ dependencies {
 
     // Reorder Implementation
     implementation("org.burnoutcrew.composereorderable:reorderable:0.9.6")
+
+    // System bar color control Implementation
+    implementation "com.google.accompanist:accompanist-systemuicontroller:0.27.0"
+
+    implementation 'com.google.android.exoplayer:exoplayer-common:2.18.7'
+
 
 }

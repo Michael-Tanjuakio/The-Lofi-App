@@ -132,7 +132,7 @@ fun EditPlaylistScreen(navController: NavController) {
                 Box(modifier = Modifier.padding(start = 5.dp, top = 3.dp)) { // Back button
                     IconButton(onClick = {
                         if (!text.isEmpty())
-                            navController.navigate(ScreenRoutes.PlaylistScreen.route)
+                            navController.navigateUp()
                         else
                             openNoTitleDialog = true
                     }) {

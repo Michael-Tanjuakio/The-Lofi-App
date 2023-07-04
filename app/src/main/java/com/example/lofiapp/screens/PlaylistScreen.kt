@@ -108,7 +108,7 @@ fun PlaylistScreen(navController: NavController) {
             // Top App Bar Components
             Row {
                 Box(modifier = Modifier.padding(start = 5.dp, top = 3.dp)) { // Back button
-                    IconButton(onClick = { navController.navigate(ScreenRoutes.HomeScreen.route) }) {
+                    IconButton(onClick = { navController.navigateUp() }) {
                         Image(
                             // back symbol
                             painter = painterResource(id = R.drawable.arrow_back_icon),
