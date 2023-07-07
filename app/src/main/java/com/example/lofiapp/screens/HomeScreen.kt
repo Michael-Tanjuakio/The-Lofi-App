@@ -32,11 +32,17 @@ import com.example.lofiapp.ui.theme.LofiappTheme
 import com.example.lofiapp.ui.theme.flamenco_regular
 import com.example.lofiapp.ui.theme.montserrat_bold
 import com.example.lofiapp.ui.theme.montserrat_light
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
 data class videoDisplay(var videoTitle: String)
 
 @Composable
 fun HomeScreen(title: String, search: String, navController: NavController) {
+
+    // System bar colors
+    val systemUiController = rememberSystemUiController()
+    systemUiController.setStatusBarColor(color = Color(0xFF24CAAC))
+    systemUiController.setNavigationBarColor(color = Color(0xFF24CAAC))
 
     val list = listOf("1", "1", "1", "1") // placeholder
     val video_id = "jfKfPfyJRdk" // video-id example
