@@ -293,19 +293,3 @@ fun DefaultPreview() {
 //        );
     }
 }
-
-/*
-        TextField(
-            placeholder = {
-                Text(text = search,
-                    fontFamily = flamenco_regular,
-                    fontSize = 16.sp)
-                          },
-            value = text,
-            onValueChange = { text = it },
-            modifier = Modifier
-                .align(alignment = Alignment.CenterHorizontally)
-                .padding(top = 48.dp),
-            singleLine = true
-        )
-*/

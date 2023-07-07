@@ -2,6 +2,9 @@ package com.example.lofiapp.screens
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import android.util.Log
+import android.view.MotionEvent
+import android.view.View
 import androidx.activity.compose.BackHandler
 import androidx.annotation.NonNull
 import androidx.compose.animation.AnimatedVisibility
@@ -22,6 +25,7 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -33,6 +37,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.IconButton
 import androidx.compose.material.Scaffold
+import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
@@ -43,14 +48,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -70,6 +78,7 @@ import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
 
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun VideoScreen(navController: NavController, video_id: String) {
 
@@ -78,9 +87,13 @@ fun VideoScreen(navController: NavController, video_id: String) {
     val fullsize_path_img =
         "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
     var execute by remember { mutableStateOf(true) }
+    var showControls by remember { mutableStateOf(true) }
+    var showQueueH by remember { mutableStateOf(false) }
+    var showQueueV by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
     val context = LocalContext.current
     val activity = context as Activity
-    if (execute) {
+    if (execute) { // initial screen orientation
         activity.requestedOrientation = remember { (ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) }
         activity.requestedOrientation = remember { ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR }
         execute = !execute
@@ -92,296 +105,226 @@ fun VideoScreen(navController: NavController, video_id: String) {
     systemUiController.setNavigationBarColor(color = Color.Black)
 
     var back by remember { mutableStateOf(true) }
-    BackHandler(back, onBack = { back = false })
+    BackHandler(back, onBack = { back = false }) // system back button
     if (!back) {
         navController.navigateUp()
     }
 
-    var showControls by remember { mutableStateOf(true) }
-    val interactionSource = remember { MutableInteractionSource() }
-    // Video Display
-    Scaffold(
-        modifier = Modifier.clickable(onClick = {showControls = true},
-            interactionSource = interactionSource,
-            indication = null),
-        backgroundColor = Color.Black,
-        topBar = { },
-        content = { padding ->
-            // Diaplyed Videos
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding()
-                        .fillMaxHeight(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-
-                    YoutubeScreen(
-                        video_id,
-                        Modifier
-                            .aspectRatio(16 / 9f)
-                    )
-
-
-                }
-            }
-        })
-
-
-    var showQueueH by remember { mutableStateOf(false) }
-    var showQueueV by remember { mutableStateOf(false) }
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxHeight(),
-    ) {
-        AnimatedVisibility(
-            visible = showControls,
-            enter = fadeIn(animationSpec = tween(1000)),
-            exit = fadeOut(animationSpec = tween(1000)),
-            modifier = Modifier.align(Alignment.Center)
-        ) {
-
-            LaunchedEffect(true) {
-                delay(3.seconds).apply {
-                    showControls = false
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight()
-            ) {
-
-                // Back button
-                IconButton(onClick = { back = !back }) {
-                    Image(
-                        // back symbol
-                        painter = painterResource(id = R.drawable.arrow_back_icon),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(35.dp)
-                            .align(Alignment.TopStart),
-                        colorFilter = ColorFilter.tint(color = Color.White),
-                    )
-                }
-
-                // Rotate Screen button
-                IconButton(
-                    onClick = {
-                        if (hori) {
-                            activity.requestedOrientation =
-                                ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
-                            activity.requestedOrientation =
-                                ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
-                        } else {
-                            activity.requestedOrientation =
-                                ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
-                            activity.requestedOrientation =
-                                ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
-                        }
-                        hori = !hori
-                    },
-                    modifier = Modifier.align(Alignment.BottomStart)
-                ) {
-                    Image(
-                        // back symbol
-                        painter = painterResource(id = R.drawable.screen_rotation_icon),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(35.dp),
-                        colorFilter = ColorFilter.tint(color = Color.White),
-                    )
-                }
-
-                // Add Playlist button
-                IconButton(
-                    onClick = { },
-                    modifier = Modifier.align(Alignment.TopEnd)
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.playlist_add_icon),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(35.dp),
-                        colorFilter = ColorFilter.tint(color = Color.White),
-                    )
-                }
-                // queue button
-                IconButton(
-                    onClick = {
-                        if (hori) {
-                            showQueueH = true.apply { showControls = false }
-                        } else {
-                            showQueueV = true.apply { showControls = false }
-                        }
-                    },
-                    modifier = Modifier.align(Alignment.BottomEnd)
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.queue_icon),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(35.dp),
-                        colorFilter = ColorFilter.tint(color = Color.White),
-                    )
-                }
-
-                // Play previous button
-                IconButton(
-                    onClick = {
-
-                    },
-                    modifier = Modifier.align(Alignment.CenterStart)
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.skip_previous_icon),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(35.dp),
-                        colorFilter = ColorFilter.tint(color = Color.White),
-                    )
-                }
-
-                // Play next button
-                IconButton(
-                    onClick = {
-
-                    },
-                    modifier = Modifier.align(Alignment.CenterEnd)
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.skip_next_icon),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(35.dp),
-                        colorFilter = ColorFilter.tint(color = Color.White),
-                    )
-                }
-
-            }
+    class DemoOnTouchListener : View.OnTouchListener {
+        override fun onTouch(v: View, event: MotionEvent): Boolean {
+            showControls = true
+            return false
         }
+    }
 
-
-        // Display queue (horizontal)
-        AnimatedVisibility(
-            visible = showQueueH,
-            enter = fadeIn(animationSpec = tween(1000)),
-            exit = fadeOut(animationSpec = tween(1000)),
-            modifier = Modifier.align(Alignment.Center)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight()
-                    .background(Color.Black.copy(alpha = 0.6f))
-            ) {
-                // System back button
-                BackHandler(
-                    enabled = true,
-                    onBack = { showQueueH = false.apply { showControls = true } })
-                // Back button
-                IconButton(onClick = { showQueueH = false.apply { showControls = true } }) {
-                    Image(
-                        // back symbol
-                        painter = painterResource(id = R.drawable.arrow_back_icon),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(35.dp)
-                            .align(Alignment.TopStart),
-                        colorFilter = ColorFilter.tint(color = Color.White),
-                    )
-                }
-                // Queue display
-                LazyRow(
+    val listener = DemoOnTouchListener()
+    val view = LocalView.current
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .pointerInteropFilter { motionEvent -> // touch screen shows controls for 3 seconds
+            listener.onTouch(view, motionEvent)
+        }) {
+        // Video Display
+        Scaffold(
+            modifier = Modifier,
+            backgroundColor = Color.Black,
+            topBar = { },
+            content = { padding ->
+                // Diaplyed Videos
+                Column(
                     modifier = Modifier
-                        .padding(start = 13.dp, top = 6.dp)
-                        .align(Alignment.Center)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    items(items = list, itemContent = { item ->
-                        Column(modifier = Modifier
-                            .padding(start = 16.dp)
-                            .clip(RoundedCornerShape(12, 12, 5, 5))
-                            .clickable {
-                                navController.navigate(ScreenRoutes.VideoScreen.route)
-                            }
-                        ) { // Video Display
-                            // {
-                            AsyncImage( // Video thumbnail
-                                model = fullsize_path_img,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(width = 220.dp, height = 134.dp)
-                                    .clip(RoundedCornerShape(12))
-                            )
-                            Text( // Video name
-                                text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
-                                maxLines = 2,
-                                modifier = Modifier
-                                    .width(220.dp)
-                                    .height(IntrinsicSize.Max),
-                                fontSize = 16.sp,
-                                fontFamily = montserrat_light,
-                                color = Color.White
-                            )
-                        }
-                    })
-                }
-            }
-        }
-
-        // Display queue (vertical)
-        AnimatedVisibility(
-            visible = showQueueV,
-            enter = fadeIn(animationSpec = tween(1000)),
-            exit = fadeOut(animationSpec = tween(1000)),
-            modifier = Modifier.align(Alignment.Center)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight()
-                    .background(Color.Black.copy(alpha = 0.6f))
-            ) {
-                // System back button
-                BackHandler(
-                    enabled = true,
-                    onBack = { showQueueV = false.apply { showControls = true } })
-                // Back button
-                Column() {
-                    Box(
-                        modifier = Modifier.fillMaxWidth()
+                    Row(
+                        modifier = Modifier
+                            .padding()
+                            .fillMaxHeight(),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        IconButton(onClick = {
-                            showQueueV = false.apply {
-                                showControls = true
-                            }
-                        }) {
-                            Image(
-                                // back symbol
-                                painter = painterResource(id = R.drawable.arrow_back_icon),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(35.dp)
-                                    .align(Alignment.TopStart),
-                                colorFilter = ColorFilter.tint(color = Color.White),
-                            )
-                        }
+
+                        YoutubeScreen(
+                            video_id,
+                            Modifier
+                                .aspectRatio(16 / 9f)
+                        )
+
                     }
-                    LazyColumn(
+                }
+            })
+
+        // Controls Display
+        Box(
+            modifier = Modifier
+                .fillMaxSize(),
+        ) {
+            AnimatedVisibility( // Appears smoothly
+                visible = showControls,
+                enter = fadeIn(animationSpec = tween(1000)),
+                exit = fadeOut(animationSpec = tween(1000)),
+                modifier = Modifier.align(Alignment.Center)
+            ) {
+
+                LaunchedEffect(showControls) {// Disappears after 3 seconds
+                    delay(3.seconds).apply {
+                        showControls = false
+                    }
+                }
+
+                Box( // control buttons
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight()
+                ) {
+
+                    // Back button
+                    IconButton(onClick = { back = !back }) {
+                        Image(
+                            // back symbol
+                            painter = painterResource(id = R.drawable.arrow_back_icon),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(35.dp)
+                                .align(Alignment.TopStart),
+                            colorFilter = ColorFilter.tint(color = Color.White),
+                        )
+                    }
+
+                    // Rotate Screen button
+                    IconButton(
+                        onClick = {
+                            if (hori) {
+                                activity.requestedOrientation =
+                                    ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+                                activity.requestedOrientation =
+                                    ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+                            } else {
+                                activity.requestedOrientation =
+                                    ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
+                                activity.requestedOrientation =
+                                    ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+                            }
+                            hori = !hori
+                        },
+                        modifier = Modifier.align(Alignment.BottomStart)
+                    ) {
+                        Image(
+                            // back symbol
+                            painter = painterResource(id = R.drawable.screen_rotation_icon),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(35.dp),
+                            colorFilter = ColorFilter.tint(color = Color.White),
+                        )
+                    }
+
+                    // Add Playlist button
+                    IconButton(
+                        onClick = { },
+                        modifier = Modifier.align(Alignment.TopEnd)
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.playlist_add_icon),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(35.dp),
+                            colorFilter = ColorFilter.tint(color = Color.White),
+                        )
+                    }
+                    // queue button
+                    IconButton(
+                        onClick = {
+                            if (hori) {
+                                showQueueH = true.apply { showControls = false }
+                            } else {
+                                showQueueV = true.apply { showControls = false }
+                            }
+                        },
+                        modifier = Modifier.align(Alignment.BottomEnd)
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.queue_icon),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(35.dp),
+                            colorFilter = ColorFilter.tint(color = Color.White),
+                        )
+                    }
+
+                    // Play previous button
+                    IconButton(
+                        onClick = {
+
+                        },
+                        modifier = Modifier.align(Alignment.CenterStart)
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.skip_previous_icon),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(35.dp),
+                            colorFilter = ColorFilter.tint(color = Color.White),
+                        )
+                    }
+
+                    // Play next button
+                    IconButton(
+                        onClick = {
+
+                        },
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.skip_next_icon),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(35.dp),
+                            colorFilter = ColorFilter.tint(color = Color.White),
+                        )
+                    }
+
+                }
+            }
+
+
+            // Display queue (horizontal)
+            AnimatedVisibility(
+                visible = showQueueH,
+                enter = fadeIn(animationSpec = tween(1000)),
+                exit = fadeOut(animationSpec = tween(1000)),
+                modifier = Modifier.align(Alignment.Center)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight()
+                        .background(Color.Black.copy(alpha = 0.6f))
+                ) {
+                    // System back button
+                    BackHandler(
+                        enabled = true,
+                        onBack = { showQueueH = false.apply { showControls = true } })
+                    // Back button
+                    IconButton(onClick = { showQueueH = false.apply { showControls = true } }) {
+                        Image(
+                            // back symbol
+                            painter = painterResource(id = R.drawable.arrow_back_icon),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(35.dp)
+                                .align(Alignment.TopStart),
+                            colorFilter = ColorFilter.tint(color = Color.White),
+                        )
+                    }
+                    // Queue display
+                    LazyRow(
                         modifier = Modifier
-                            .padding(start = 0.dp, top = 5.dp)
-                            .align(Alignment.CenterHorizontally)
+                            .padding(start = 13.dp, top = 6.dp)
+                            .align(Alignment.Center)
                     ) {
                         items(items = list, itemContent = { item ->
                             Column(modifier = Modifier
-                                .padding(start = 0.dp)
+                                .padding(start = 16.dp)
                                 .clip(RoundedCornerShape(12, 12, 5, 5))
                                 .clickable {
                                     navController.navigate(ScreenRoutes.VideoScreen.route)
@@ -411,10 +354,86 @@ fun VideoScreen(navController: NavController, video_id: String) {
                     }
                 }
             }
+
+            // Display queue (vertical)
+            AnimatedVisibility(
+                visible = showQueueV,
+                enter = fadeIn(animationSpec = tween(1000)),
+                exit = fadeOut(animationSpec = tween(1000)),
+                modifier = Modifier.align(Alignment.Center)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight()
+                        .background(Color.Black.copy(alpha = 0.6f))
+                ) {
+                    // System back button
+                    BackHandler(
+                        enabled = true,
+                        onBack = { showQueueV = false.apply { showControls = true } })
+                    // Back button
+                    Column() {
+                        Box(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            IconButton(onClick = {
+                                showQueueV = false.apply {
+                                    showControls = true
+                                }
+                            }) {
+                                Image(
+                                    // back symbol
+                                    painter = painterResource(id = R.drawable.arrow_back_icon),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(35.dp)
+                                        .align(Alignment.TopStart),
+                                    colorFilter = ColorFilter.tint(color = Color.White),
+                                )
+                            }
+                        }
+                        LazyColumn(
+                            modifier = Modifier
+                                .padding(start = 0.dp, top = 5.dp)
+                                .align(Alignment.CenterHorizontally)
+                        ) {
+                            items(items = list, itemContent = { item ->
+                                Column(modifier = Modifier
+                                    .padding(start = 0.dp)
+                                    .clip(RoundedCornerShape(12, 12, 5, 5))
+                                    .clickable {
+                                        navController.navigate(ScreenRoutes.VideoScreen.route)
+                                    }
+                                ) { // Video Display
+                                    // {
+                                    AsyncImage( // Video thumbnail
+                                        model = fullsize_path_img,
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(width = 220.dp, height = 134.dp)
+                                            .clip(RoundedCornerShape(12))
+                                    )
+                                    Text( // Video name
+                                        text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
+                                        maxLines = 2,
+                                        modifier = Modifier
+                                            .width(220.dp)
+                                            .height(IntrinsicSize.Max),
+                                        fontSize = 16.sp,
+                                        fontFamily = montserrat_light,
+                                        color = Color.White
+                                    )
+                                }
+                            })
+                        }
+                    }
+                }
+            }
+
         }
-
     }
-
 
 
 }
