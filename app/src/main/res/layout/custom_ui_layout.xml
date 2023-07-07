@@ -1,0 +1,32 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:visibility="visible">
+
+
+    <Button
+        android:id="@+id/skip_previous_button"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        android:layout_alignParentLeft="true"
+        android:layout_centerVertical="true"
+        android:background="@drawable/skip_previous_icon"
+        android:shadowColor="@color/black"
+        android:backgroundTint="@color/white"
+        android:padding="10sp"
+        android:text="" />
+
+    <Button
+        android:id="@+id/skip_next_button"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
+        android:background="@drawable/skip_next_icon"
+        android:shadowColor="@color/black"
+        android:backgroundTint="@color/white"
+        android:padding="10sp"
+        android:text="" />
+
+
+</RelativeLayout>
