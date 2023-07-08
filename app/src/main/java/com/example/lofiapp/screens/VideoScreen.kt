@@ -2,6 +2,7 @@ package com.example.lofiapp.screens
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
@@ -11,14 +12,11 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.forEachGesture
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -37,12 +35,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.IconButton
 import androidx.compose.material.Scaffold
-import androidx.compose.material.Surface
 import androidx.compose.material.Text
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,9 +48,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalView
@@ -78,27 +73,26 @@ import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
 
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun VideoScreen(navController: NavController, video_id: String) {
 
+    // placeholder variables
     val list = listOf("1", "1", "1", "1", "1", "1", "1", "1") // placeholder
     //val video_id = "jfKfPfyJRdk" // video-id example
     val fullsize_path_img =
         "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
-    var execute by remember { mutableStateOf(true) }
     var showControls by remember { mutableStateOf(true) }
     var showQueueH by remember { mutableStateOf(false) }
     var showQueueV by remember { mutableStateOf(false) }
-    val interactionSource = remember { MutableInteractionSource() }
     val context = LocalContext.current
     val activity = context as Activity
-    if (execute) { // initial screen orientation
-        activity.requestedOrientation = remember { (ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) }
-        activity.requestedOrientation = remember { ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR }
-        execute = !execute
-    }
+
+    // initial screen orientation
+    var execute by remember { mutableStateOf(true) }
     var hori by remember { mutableStateOf(true) }
+    var dialogue by remember { mutableStateOf(false) }
+    var lockOrientation by remember { mutableStateOf(true) }
 
     val systemUiController = rememberSystemUiController()
     systemUiController.setStatusBarColor(color = Color.Black)
@@ -112,7 +106,8 @@ fun VideoScreen(navController: NavController, video_id: String) {
 
     class DemoOnTouchListener : View.OnTouchListener {
         override fun onTouch(v: View, event: MotionEvent): Boolean {
-            showControls = true
+            if (!dialogue)
+                showControls = true
             return false
         }
     }
@@ -190,30 +185,47 @@ fun VideoScreen(navController: NavController, video_id: String) {
                         )
                     }
 
-                    // Rotate Screen button
-                    IconButton(
-                        onClick = {
-                            if (hori) {
-                                activity.requestedOrientation =
-                                    ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
-                                activity.requestedOrientation =
-                                    ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
-                            } else {
-                                activity.requestedOrientation =
-                                    ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
-                                activity.requestedOrientation =
-                                    ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
-                            }
-                            hori = !hori
-                        },
-                        modifier = Modifier.align(Alignment.BottomStart)
-                    ) {
+                    // rotation buttons
+                    val configuration = LocalConfiguration.current
+                    if (lockOrientation) { // locked orientation
+                        activity.requestedOrientation =
+                            ActivityInfo.SCREEN_ORIENTATION_NOSENSOR
+                        if (execute) { // initial screen orientation
+                            activity.requestedOrientation = remember { (ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) }
+                            Log.d("orientationScreen", "landscape")
+                        }
                         Image(
-                            // back symbol
+                            painter = painterResource(id = R.drawable.screen_lock_rotation_icon),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(35.dp)
+                                .align(Alignment.BottomStart)
+                                .combinedClickable(
+                                    onClick = { },
+                                    onDoubleClick = {
+                                        Log.d("doubletap", "Box double tapped")
+                                        if (execute)
+                                            execute = !execute // executes once
+                                        lockOrientation = !lockOrientation
+                                    }
+                                ),
+                            colorFilter = ColorFilter.tint(color = Color.White),
+                        )
+                    } else { // rotate button
+                        activity.requestedOrientation =
+                            ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR // you can rotate screen
+                        Image(
                             painter = painterResource(id = R.drawable.screen_rotation_icon),
                             contentDescription = null,
                             modifier = Modifier
-                                .size(35.dp),
+                                .size(35.dp)
+                                .align(Alignment.BottomStart)
+                                .combinedClickable(
+                                    onDoubleClick = {
+                                        lockOrientation = !lockOrientation // changes icon
+                                    },
+                                    onClick = {                                   }
+                                ),
                             colorFilter = ColorFilter.tint(color = Color.White),
                         )
                     }
@@ -231,9 +243,11 @@ fun VideoScreen(navController: NavController, video_id: String) {
                             colorFilter = ColorFilter.tint(color = Color.White),
                         )
                     }
+
                     // queue button
                     IconButton(
                         onClick = {
+                            dialogue = true
                             if (hori) {
                                 showQueueH = true.apply { showControls = false }
                             } else {
@@ -254,7 +268,7 @@ fun VideoScreen(navController: NavController, video_id: String) {
                     // Play previous button
                     IconButton(
                         onClick = {
-
+                            navController.navigate(ScreenRoutes.VideoScreen.route)
                         },
                         modifier = Modifier.align(Alignment.CenterStart)
                     ) {
@@ -270,7 +284,7 @@ fun VideoScreen(navController: NavController, video_id: String) {
                     // Play next button
                     IconButton(
                         onClick = {
-
+                            navController.navigate(ScreenRoutes.VideoScreen.route)
                         },
                         modifier = Modifier.align(Alignment.CenterEnd)
                     ) {
