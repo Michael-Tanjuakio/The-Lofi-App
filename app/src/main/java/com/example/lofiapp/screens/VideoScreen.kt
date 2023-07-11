@@ -12,15 +12,16 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,11 +33,20 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
+import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.Scaffold
+import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -55,14 +66,23 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.LifecycleOwner
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.lofiapp.R
+import com.example.lofiapp.data.MenuAction
 import com.example.lofiapp.data.ScreenRoutes
+import com.example.lofiapp.ui.theme.flamenco_regular
+import com.example.lofiapp.ui.theme.montserrat_bold
 import com.example.lofiapp.ui.theme.montserrat_light
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
@@ -73,26 +93,41 @@ import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
 
 
-@OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun VideoScreen(navController: NavController, video_id: String) {
 
     // placeholder variables
     val list = listOf("1", "1", "1", "1", "1", "1", "1", "1") // placeholder
+    val playlistsList = listOf(
+        "laura's playlist",
+        "michael's playlist",
+        "chris soundtrack",
+        "jonathan album",
+        "laura's playlist",
+        "michael's playlist",
+        "chris soundtrack",
+        "jonathan album"
+    )
     //val video_id = "jfKfPfyJRdk" // video-id example
     val fullsize_path_img =
         "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
     var showControls by remember { mutableStateOf(true) }
     var showQueueH by remember { mutableStateOf(false) }
     var showQueueV by remember { mutableStateOf(false) }
+    var showAddPlaylist by remember { mutableStateOf(false) }
+    var showCreateNewPlaylist by remember { mutableStateOf(false) }
+    var openNoTitleDialog by remember { mutableStateOf(false) } // no title dialog popup
     val context = LocalContext.current
-    val activity = context as Activity
+    val activity = remember { context as Activity }
+    val interactionSource = remember { MutableInteractionSource() }
 
     // initial screen orientation
     var execute by remember { mutableStateOf(true) }
     var hori by remember { mutableStateOf(true) }
     var dialogue by remember { mutableStateOf(false) }
     var lockOrientation by remember { mutableStateOf(true) }
+    val configuration = LocalConfiguration.current
 
     val systemUiController = rememberSystemUiController()
     systemUiController.setStatusBarColor(color = Color.Black)
@@ -186,24 +221,27 @@ fun VideoScreen(navController: NavController, video_id: String) {
                     }
 
                     // rotation buttons
-                    val configuration = LocalConfiguration.current
-                    if (lockOrientation) { // locked orientation
+                    if (lockOrientation) { // locked orientation button
+
                         activity.requestedOrientation =
-                            ActivityInfo.SCREEN_ORIENTATION_NOSENSOR
-                        if (execute) { // initial screen orientation
-                            activity.requestedOrientation = remember { (ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) }
+                            ActivityInfo.SCREEN_ORIENTATION_LOCKED // disable rotation
+
+                        if (execute) { // initial screen orientation (landscape)
+                            activity.requestedOrientation =
+                                ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                             Log.d("orientationScreen", "landscape")
                         }
+
                         Image(
+                            // button icon
                             painter = painterResource(id = R.drawable.screen_lock_rotation_icon),
                             contentDescription = null,
                             modifier = Modifier
                                 .size(35.dp)
                                 .align(Alignment.BottomStart)
-                                .combinedClickable(
-                                    onClick = { },
-                                    onDoubleClick = {
-                                        Log.d("doubletap", "Box double tapped")
+                                .padding(start = 3.dp, bottom = 3.dp)
+                                .clickable(
+                                    onClick = {
                                         if (execute)
                                             execute = !execute // executes once
                                         lockOrientation = !lockOrientation
@@ -212,19 +250,21 @@ fun VideoScreen(navController: NavController, video_id: String) {
                             colorFilter = ColorFilter.tint(color = Color.White),
                         )
                     } else { // rotate button
+
                         activity.requestedOrientation =
-                            ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR // you can rotate screen
+                            ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR // enable rotation
+
                         Image(
                             painter = painterResource(id = R.drawable.screen_rotation_icon),
                             contentDescription = null,
                             modifier = Modifier
                                 .size(35.dp)
                                 .align(Alignment.BottomStart)
-                                .combinedClickable(
-                                    onDoubleClick = {
-                                        lockOrientation = !lockOrientation // changes icon
-                                    },
-                                    onClick = {                                   }
+                                .padding(start = 3.dp, bottom = 3.dp)
+                                .clickable(
+                                    onClick = {
+                                        lockOrientation = !lockOrientation
+                                    }
                                 ),
                             colorFilter = ColorFilter.tint(color = Color.White),
                         )
@@ -232,7 +272,13 @@ fun VideoScreen(navController: NavController, video_id: String) {
 
                     // Add Playlist button
                     IconButton(
-                        onClick = { },
+                        onClick = {
+                            dialogue = true
+                            showAddPlaylist = true.apply {
+                                showControls = false
+                                dialogue = true
+                            }
+                        },
                         modifier = Modifier.align(Alignment.TopEnd)
                     ) {
                         Image(
@@ -247,11 +293,19 @@ fun VideoScreen(navController: NavController, video_id: String) {
                     // queue button
                     IconButton(
                         onClick = {
-                            dialogue = true
-                            if (hori) {
-                                showQueueH = true.apply { showControls = false }
-                            } else {
-                                showQueueV = true.apply { showControls = false }
+                            when (configuration.orientation) {
+                                Configuration.ORIENTATION_LANDSCAPE -> {
+                                    showQueueH = true.apply {
+                                        showControls = false
+                                        dialogue = true
+                                    }
+                                }
+                                Configuration.ORIENTATION_PORTRAIT -> {
+                                    showQueueV = true.apply {
+                                        showControls = false
+                                        dialogue = true
+                                    }
+                                }
                             }
                         },
                         modifier = Modifier.align(Alignment.BottomEnd)
@@ -308,18 +362,28 @@ fun VideoScreen(navController: NavController, video_id: String) {
                 exit = fadeOut(animationSpec = tween(1000)),
                 modifier = Modifier.align(Alignment.Center)
             ) {
+
+                activity.requestedOrientation =
+                    ActivityInfo.SCREEN_ORIENTATION_LOCKED // disable rotation
+
+                // System back button
+                BackHandler(
+                    enabled = true,
+                    onBack = { showQueueH = false.apply { dialogue = false } }
+                )
+
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight()
+                        .fillMaxSize()
                         .background(Color.Black.copy(alpha = 0.6f))
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null
+                        ) {}
                 ) {
-                    // System back button
-                    BackHandler(
-                        enabled = true,
-                        onBack = { showQueueH = false.apply { showControls = true } })
+
                     // Back button
-                    IconButton(onClick = { showQueueH = false.apply { showControls = true } }) {
+                    IconButton(onClick = { showQueueH = false.apply { dialogue = false } }) {
                         Image(
                             // back symbol
                             painter = painterResource(id = R.drawable.arrow_back_icon),
@@ -330,6 +394,7 @@ fun VideoScreen(navController: NavController, video_id: String) {
                             colorFilter = ColorFilter.tint(color = Color.White),
                         )
                     }
+
                     // Queue display
                     LazyRow(
                         modifier = Modifier
@@ -341,10 +406,9 @@ fun VideoScreen(navController: NavController, video_id: String) {
                                 .padding(start = 16.dp)
                                 .clip(RoundedCornerShape(12, 12, 5, 5))
                                 .clickable {
-                                    navController.navigate(ScreenRoutes.VideoScreen.route)
+                                    navController.navigate(ScreenRoutes.VideoScreen.route) // link to video
                                 }
                             ) { // Video Display
-                                // {
                                 AsyncImage( // Video thumbnail
                                     model = fullsize_path_img,
                                     contentDescription = null,
@@ -376,25 +440,32 @@ fun VideoScreen(navController: NavController, video_id: String) {
                 exit = fadeOut(animationSpec = tween(1000)),
                 modifier = Modifier.align(Alignment.Center)
             ) {
+
+                activity.requestedOrientation =
+                    ActivityInfo.SCREEN_ORIENTATION_LOCKED // disable rotation
+
+                // System back button
+                BackHandler(
+                    enabled = true,
+                    onBack = { showQueueV = false.apply { dialogue = false } }
+                )
+
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight()
+                        .fillMaxSize()
                         .background(Color.Black.copy(alpha = 0.6f))
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null
+                        ) {}
                 ) {
-                    // System back button
-                    BackHandler(
-                        enabled = true,
-                        onBack = { showQueueV = false.apply { showControls = true } })
-                    // Back button
+
                     Column() {
-                        Box(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
+
+                        // Back button
+                        Box(modifier = Modifier.fillMaxWidth()) {
                             IconButton(onClick = {
-                                showQueueV = false.apply {
-                                    showControls = true
-                                }
+                                showQueueV = false.apply { dialogue = false }
                             }) {
                                 Image(
                                     // back symbol
@@ -407,6 +478,8 @@ fun VideoScreen(navController: NavController, video_id: String) {
                                 )
                             }
                         }
+
+                        // Queue Display
                         LazyColumn(
                             modifier = Modifier
                                 .padding(start = 0.dp, top = 5.dp)
@@ -417,10 +490,9 @@ fun VideoScreen(navController: NavController, video_id: String) {
                                     .padding(start = 0.dp)
                                     .clip(RoundedCornerShape(12, 12, 5, 5))
                                     .clickable {
-                                        navController.navigate(ScreenRoutes.VideoScreen.route)
+                                        navController.navigate(ScreenRoutes.VideoScreen.route) // link to video
                                     }
                                 ) { // Video Display
-                                    // {
                                     AsyncImage( // Video thumbnail
                                         model = fullsize_path_img,
                                         contentDescription = null,
@@ -446,10 +518,379 @@ fun VideoScreen(navController: NavController, video_id: String) {
                 }
             }
 
+            // Display add playlist
+            AnimatedVisibility(
+                visible = showAddPlaylist,
+                enter = fadeIn(animationSpec = tween(1000)),
+                exit = fadeOut(animationSpec = tween(1000)),
+                modifier = Modifier.align(Alignment.Center)
+            ) {
+
+                // System back button
+                BackHandler(
+                    enabled = true,
+                    onBack = { showAddPlaylist = false.apply { dialogue = false } })
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.6f))
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null
+                        ) {}
+                ) {
+
+                    // Back button
+                    IconButton(onClick = { showAddPlaylist = false.apply { dialogue = false } }) {
+                        Image(
+                            // back symbol
+                            painter = painterResource(id = R.drawable.arrow_back_icon),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(35.dp)
+                                .align(Alignment.TopStart),
+                            colorFilter = ColorFilter.tint(color = Color.White),
+                        )
+                    }
+
+                    Box( // white box
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6, 6, 0, 0))
+                            .background(Color.White)
+                            .fillMaxHeight(0.65f)
+                            .fillMaxWidth(0.80f)
+                            .align(Alignment.BottomCenter)
+                            .fillMaxHeight(0.5f)
+                    ) {
+                        Column(modifier = Modifier.fillMaxHeight()) {
+                            Box( // green box
+                                modifier = Modifier
+                                    .background(Color(0xFF24CAAC))
+                                    .fillMaxHeight(0.18f)
+                                    .fillMaxWidth()
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.CenterStart)
+                                        .padding(start = 20.dp)
+                                ) {
+                                    Text( // Title Text
+                                        text = "Add to Playlist",
+                                        fontSize = 23.sp,
+                                        fontFamily = montserrat_bold,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                            // Playlist list
+                            Box(
+                                modifier = Modifier.padding(
+                                    start = 20.dp,
+                                    top = 10.dp,
+                                    end = 20.dp
+                                )
+                            ) {
+                                Column() {
+                                    Row(modifier = Modifier.clickable() {
+                                        showCreateNewPlaylist = true
+                                    }) {
+                                        Text( // Title Text
+                                            text = "Create New Playlist",
+                                            fontSize = 20.sp,
+                                            fontFamily = montserrat_light,
+                                            color = Color.Black
+                                        )
+
+                                        Spacer(Modifier.weight(1f))
+
+                                        Image( // add new icon
+                                            painter = painterResource(id = R.drawable.add_new_icon),
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .size(35.dp)
+                                                .align(Alignment.CenterVertically)
+                                                .clickable(onClick = {
+                                                    showCreateNewPlaylist = true
+                                                }),
+                                            colorFilter = ColorFilter.tint(color = Color.Gray)
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(7.dp))
+
+                                    Box( // line seperater
+                                        modifier = Modifier
+                                            .background(Color(0xFF828282))
+                                            .fillMaxWidth(1f)
+                                            .height(2.dp)
+                                    )
+
+                                    Spacer(modifier = Modifier.height(7.dp))
+
+                                    Box(modifier = Modifier.fillMaxHeight(.75f)) {
+                                        LazyColumn() {
+                                            items(items = playlistsList, itemContent = { item ->
+
+                                                Row(modifier = Modifier.clickable() {
+                                                    // ADD VIDEO TO PLAYLIST HERE
+                                                }) {
+                                                    Text( // Playlist Title
+                                                        text = item,
+                                                        fontSize = 20.sp,
+                                                        fontFamily = montserrat_light,
+                                                        color = Color.Black
+                                                    )
+
+                                                    Spacer(Modifier.weight(1f))
+
+                                                    Image( // add to playlist icon
+                                                        painter = painterResource(id = R.drawable.check_box_outline_blank_icon),
+                                                        contentDescription = null,
+                                                        modifier = Modifier
+                                                            .size(35.dp)
+                                                            .align(Alignment.CenterVertically)
+                                                            .clickable() {
+                                                                // ADD VIDEO TO PLAYLIST HERE
+                                                            },
+                                                        colorFilter = ColorFilter.tint(color = Color.Gray)
+                                                    )
+                                                }
+
+                                                Spacer(modifier = Modifier.height(5.dp))
+
+                                            })
+                                        }
+                                    }
+
+                                    Button(onClick = {
+                                        showAddPlaylist = false.apply { dialogue = false }
+                                    },
+                                        colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF3392EA)),
+                                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(text = "Confirm", color = Color.White, fontFamily = montserrat_bold)
+                                    }
+
+
+                                }
+                            }
+                        }
+                    }
+
+
+                }
+            }
+
+            // Display Create new playlist
+            AnimatedVisibility(
+                visible = showCreateNewPlaylist,
+                enter = fadeIn(animationSpec = tween(1000)),
+                exit = fadeOut(animationSpec = tween(1000)),
+                modifier = Modifier.align(Alignment.Center)
+            ) {
+
+                var text by remember { mutableStateOf("") } // editable text
+
+                // System back button
+                BackHandler(
+                    enabled = true,
+                    onBack = { showCreateNewPlaylist = false })
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null
+                        ) {}
+                ) {
+
+                    // Back button
+                    IconButton(onClick = { showCreateNewPlaylist = false }) {
+                        Image(
+                            // back symbol
+                            painter = painterResource(id = R.drawable.arrow_back_icon),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(35.dp)
+                                .align(Alignment.TopStart),
+                            colorFilter = ColorFilter.tint(color = Color.White),
+                        )
+                    }
+
+                    Box( // white box
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6, 6, 0, 0))
+                            .background(Color.White)
+                            .fillMaxHeight(0.65f)
+                            .fillMaxWidth(0.80f)
+                            .align(Alignment.BottomCenter)
+                            .fillMaxHeight(0.5f)
+                    ) {
+                        Column() {
+                            Box( // green box
+                                modifier = Modifier
+                                    .background(Color(0xFF24CAAC))
+                                    .fillMaxHeight(0.18f)
+                                    .fillMaxWidth()
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.CenterStart)
+                                        .padding(start = 20.dp)
+                                ) {
+                                    Text( // Title Text
+                                        text = "Create New Playlist",
+                                        fontSize = 23.sp,
+                                        fontFamily = montserrat_bold,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                            Box(
+                                modifier = Modifier.padding(
+                                    start = 20.dp,
+                                    top = 10.dp,
+                                    end = 20.dp
+                                )
+                            ) {
+                                Column() {
+                                    Spacer(modifier = Modifier.height(11.dp))
+                                    val customTextSelectionColors = TextSelectionColors( // selection text color
+                                        handleColor = Color(0xFF24CAAC),
+                                        backgroundColor = Color(0xFF24CAAC).copy(alpha = 0.4f)
+                                    )
+                                    CompositionLocalProvider(LocalTextSelectionColors provides customTextSelectionColors) {
+                                        BasicTextField(
+                                            // textfield
+                                            value = text,
+                                            onValueChange = { newText -> text = newText },
+                                            textStyle = TextStyle(
+                                                fontSize = 18.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = Color.Black,
+                                                fontFamily = montserrat_light
+                                            ),
+                                            singleLine = true,
+                                            cursorBrush = SolidColor(Color.Black),
+                                            modifier = Modifier
+                                                .fillMaxWidth(1f)
+                                                .height(30.dp),
+                                            decorationBox = { innerTextField ->
+                                                Row {
+                                                    if (text.isEmpty()) { // if there is no text
+                                                        Text(
+                                                            // search placeholder
+                                                            text = "Insert Playlist Name",
+                                                            fontSize = 18.sp,
+                                                            fontWeight = FontWeight.Normal,
+                                                            color = Color.Black.copy(alpha = 0.5f),
+                                                            fontFamily = montserrat_light,
+                                                            modifier = Modifier.align(Alignment.CenterVertically),
+                                                        )
+                                                    }
+                                                    innerTextField()
+                                                }
+                                            },
+                                        )
+                                    }
+
+                                    Box( // line seperater
+                                        modifier = Modifier
+                                            .background(Color(0xFF828282))
+                                            .fillMaxWidth(1f)
+                                            .height(2.dp)
+                                    )
+
+                                    Spacer(modifier = Modifier.height(50.dp))
+
+                                    Button(onClick = {
+                                        if (!text.isEmpty())
+                                            showCreateNewPlaylist = false
+                                        else
+                                            openNoTitleDialog = true
+                                    },
+                                        colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF3392EA)),
+                                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(text = "Confirm", color = Color.White, fontFamily = montserrat_bold)
+                                    }
+
+                                }
+                            }
+                        }
+                    }
+
+
+                }
+            }
+
+            if (openNoTitleDialog) {
+                Dialog(
+                    properties = DialogProperties(dismissOnClickOutside = true),
+                    onDismissRequest = { openNoTitleDialog = false }) {
+                    Surface(shape = RoundedCornerShape(size = 12.dp)) {
+                        Row() {
+                            Box(contentAlignment = Alignment.Center) {
+
+                                // white dialog box
+                                Canvas(
+                                    modifier = Modifier
+                                        .size(size = 300.dp)
+                                        .clip(RoundedCornerShape(12))
+                                        .align(Alignment.Center)
+                                ) {
+                                    drawRect(color = Color.White)
+                                }
+
+                                // dialog text
+                                Box(
+                                    modifier = Modifier
+                                        .padding(bottom = 110.dp)
+                                        .size(width = 300.dp, height = 120.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "Please enter a name for this playlist",
+                                        fontSize = 22.sp,
+                                        fontFamily = montserrat_bold,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+
+                                // Ok button
+                                Box(contentAlignment = Alignment.Center) {
+                                    Button(
+                                        onClick = { openNoTitleDialog = false },
+                                        modifier = Modifier
+                                            .padding(top = 150.dp, start = 0.dp)
+                                            .size(100.dp, 60.dp)
+                                            .clip(RoundedCornerShape(100)),
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            backgroundColor = Color(
+                                                0xFF3392EA
+                                            )
+                                        )
+                                    ) {
+                                        Text(
+                                            text = "OK",
+                                            fontFamily = montserrat_bold,
+                                            color = Color.White,
+                                            fontSize = 26.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         }
     }
-
-
 }
 
 @Composable
@@ -457,8 +898,6 @@ fun YoutubeScreen(
     videoId: String,
     modifier: Modifier
 ) {
-
-
     val context = LocalContext.current
     val activityLifecycle: LifecycleOwner = LocalLifecycleOwner.current
     val options: IFramePlayerOptions = IFramePlayerOptions.Builder().controls(0).build()
