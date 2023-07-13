@@ -33,14 +33,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Surface
@@ -66,7 +64,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -79,15 +76,15 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.lofiapp.R
-import com.example.lofiapp.data.MenuAction
 import com.example.lofiapp.data.ScreenRoutes
-import com.example.lofiapp.ui.theme.flamenco_regular
 import com.example.lofiapp.ui.theme.montserrat_bold
 import com.example.lofiapp.ui.theme.montserrat_light
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.options.IFramePlayerOptions
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.utils.YouTubePlayerTracker
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
@@ -124,35 +121,33 @@ fun VideoScreen(navController: NavController, video_id: String) {
 
     // initial screen orientation
     var execute by remember { mutableStateOf(true) }
-    var hori by remember { mutableStateOf(true) }
     var dialogue by remember { mutableStateOf(false) }
     var lockOrientation by remember { mutableStateOf(true) }
     val configuration = LocalConfiguration.current
 
+    // System bar colors
     val systemUiController = rememberSystemUiController()
     systemUiController.setStatusBarColor(color = Color.Black)
     systemUiController.setNavigationBarColor(color = Color.Black)
 
+    // Playlist boolean
+    var skipNext by remember { mutableStateOf(false) }
+
+    // Back handler
     var back by remember { mutableStateOf(true) }
     BackHandler(back, onBack = { back = false }) // system back button
-    if (!back) {
+    if (!back)
         navController.navigateUp()
-    }
 
-    class DemoOnTouchListener : View.OnTouchListener {
-        override fun onTouch(v: View, event: MotionEvent): Boolean {
-            if (!dialogue)
-                showControls = true
-            return false
-        }
-    }
-
-    val listener = DemoOnTouchListener()
-    val view = LocalView.current
     Box(modifier = Modifier
         .fillMaxSize()
-        .pointerInteropFilter { motionEvent -> // touch screen shows controls for 3 seconds
-            listener.onTouch(view, motionEvent)
+        .clickable(
+            interactionSource = interactionSource,
+            indication = null
+        ) {  // touch screen shows controls for 3 seconds
+            if (!dialogue)
+                showControls = true
+
         }) {
         // Video Display
         Scaffold(
@@ -173,11 +168,17 @@ fun VideoScreen(navController: NavController, video_id: String) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
 
-                        YoutubeScreen(
+                        skipNext = YoutubeScreen(
                             video_id,
                             Modifier
                                 .aspectRatio(16 / 9f)
                         )
+
+                        if (skipNext)
+                            LaunchedEffect(skipNext) {// avoids crash
+                                navController.navigate("VideoScreen/JStAYvbeSHc")
+                            }
+
 
                     }
                 }
@@ -219,112 +220,110 @@ fun VideoScreen(navController: NavController, video_id: String) {
                             colorFilter = ColorFilter.tint(color = Color.White),
                         )
                     }
+                    Row(modifier = Modifier.align(Alignment.BottomCenter)) {
+                        // rotation buttons
+                        if (lockOrientation) { // locked orientation button
 
-                    // rotation buttons
-                    if (lockOrientation) { // locked orientation button
-
-                        activity.requestedOrientation =
-                            ActivityInfo.SCREEN_ORIENTATION_LOCKED // disable rotation
-
-                        if (execute) { // initial screen orientation (landscape)
                             activity.requestedOrientation =
-                                ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                            Log.d("orientationScreen", "landscape")
+                                ActivityInfo.SCREEN_ORIENTATION_LOCKED // disable rotation
+
+                            if (execute) { // initial screen orientation (landscape)
+                                activity.requestedOrientation =
+                                    ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                                Log.d("orientationScreen", "landscape")
+                            }
+
+                            Image(
+                                // button icon
+                                painter = painterResource(id = R.drawable.screen_lock_rotation_icon),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .padding(top = 7.dp)
+                                    .clickable(
+                                        onClick = {
+                                            if (execute)
+                                                execute = !execute // executes once
+                                            lockOrientation = !lockOrientation
+                                        }
+                                    ),
+                                colorFilter = ColorFilter.tint(color = Color.White),
+                            )
+                        } else { // rotate button
+
+                            activity.requestedOrientation =
+                                ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR // enable rotation
+
+                            Image(
+                                painter = painterResource(id = R.drawable.screen_rotation_icon),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(35.dp)
+                                    .clickable(
+                                        onClick = {
+                                            lockOrientation = !lockOrientation
+                                        }
+                                    ),
+                                colorFilter = ColorFilter.tint(color = Color.White),
+                            )
                         }
 
-                        Image(
-                            // button icon
-                            painter = painterResource(id = R.drawable.screen_lock_rotation_icon),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(35.dp)
-                                .align(Alignment.BottomStart)
-                                .padding(start = 3.dp, bottom = 3.dp)
-                                .clickable(
-                                    onClick = {
-                                        if (execute)
-                                            execute = !execute // executes once
-                                        lockOrientation = !lockOrientation
-                                    }
-                                ),
-                            colorFilter = ColorFilter.tint(color = Color.White),
-                        )
-                    } else { // rotate button
-
-                        activity.requestedOrientation =
-                            ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR // enable rotation
-
-                        Image(
-                            painter = painterResource(id = R.drawable.screen_rotation_icon),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(35.dp)
-                                .align(Alignment.BottomStart)
-                                .padding(start = 3.dp, bottom = 3.dp)
-                                .clickable(
-                                    onClick = {
-                                        lockOrientation = !lockOrientation
-                                    }
-                                ),
-                            colorFilter = ColorFilter.tint(color = Color.White),
-                        )
-                    }
-
-                    // Add Playlist button
-                    IconButton(
-                        onClick = {
-                            dialogue = true
-                            showAddPlaylist = true.apply {
-                                showControls = false
+                        // Add Playlist button
+                        IconButton(
+                            onClick = {
                                 dialogue = true
-                            }
-                        },
-                        modifier = Modifier.align(Alignment.TopEnd)
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.playlist_add_icon),
-                            contentDescription = null,
+                                showAddPlaylist = true.apply {
+                                    showControls = false
+                                    dialogue = true
+                                }
+                            },
                             modifier = Modifier
-                                .size(35.dp),
-                            colorFilter = ColorFilter.tint(color = Color.White),
-                        )
-                    }
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.playlist_add_icon),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(35.dp),
+                                colorFilter = ColorFilter.tint(color = Color.White),
+                            )
+                        }
 
-                    // queue button
-                    IconButton(
-                        onClick = {
-                            when (configuration.orientation) {
-                                Configuration.ORIENTATION_LANDSCAPE -> {
-                                    showQueueH = true.apply {
-                                        showControls = false
-                                        dialogue = true
+                        // queue button
+                        IconButton(
+                            onClick = {
+                                when (configuration.orientation) {
+                                    Configuration.ORIENTATION_LANDSCAPE -> {
+                                        showQueueH = true.apply {
+                                            showControls = false
+                                            dialogue = true
+                                        }
+                                    }
+
+                                    Configuration.ORIENTATION_PORTRAIT -> {
+                                        showQueueV = true.apply {
+                                            showControls = false
+                                            dialogue = true
+                                        }
                                     }
                                 }
-                                Configuration.ORIENTATION_PORTRAIT -> {
-                                    showQueueV = true.apply {
-                                        showControls = false
-                                        dialogue = true
-                                    }
-                                }
-                            }
-                        },
-                        modifier = Modifier.align(Alignment.BottomEnd)
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.queue_icon),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(35.dp),
-                            colorFilter = ColorFilter.tint(color = Color.White),
-                        )
+                            },
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.queue_icon),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(35.dp),
+                                colorFilter = ColorFilter.tint(color = Color.White),
+                            )
+                        }
                     }
 
                     // Play previous button
                     IconButton(
                         onClick = {
-                            navController.navigate(ScreenRoutes.VideoScreen.route)
+                            navController.navigate("VideoScreen/k3y520IRXZ4")
                         },
-                        modifier = Modifier.align(Alignment.CenterStart)
+                        modifier = Modifier.align(Alignment.BottomStart)
                     ) {
                         Image(
                             painter = painterResource(id = R.drawable.skip_previous_icon),
@@ -338,9 +337,9 @@ fun VideoScreen(navController: NavController, video_id: String) {
                     // Play next button
                     IconButton(
                         onClick = {
-                            navController.navigate(ScreenRoutes.VideoScreen.route)
+                            navController.navigate("VideoScreen/JStAYvbeSHc")
                         },
-                        modifier = Modifier.align(Alignment.CenterEnd)
+                        modifier = Modifier.align(Alignment.BottomEnd)
                     ) {
                         Image(
                             painter = painterResource(id = R.drawable.skip_next_icon),
@@ -406,7 +405,7 @@ fun VideoScreen(navController: NavController, video_id: String) {
                                 .padding(start = 16.dp)
                                 .clip(RoundedCornerShape(12, 12, 5, 5))
                                 .clickable {
-                                    navController.navigate(ScreenRoutes.VideoScreen.route) // link to video
+                                    navController.navigate("VideoScreen/k3y520IRXZ4") // link to video
                                 }
                             ) { // Video Display
                                 AsyncImage( // Video thumbnail
@@ -490,7 +489,7 @@ fun VideoScreen(navController: NavController, video_id: String) {
                                     .padding(start = 0.dp)
                                     .clip(RoundedCornerShape(12, 12, 5, 5))
                                     .clickable {
-                                        navController.navigate(ScreenRoutes.VideoScreen.route) // link to video
+                                        navController.navigate("VideoScreen/k3y520IRXZ4") // link to video
                                     }
                                 ) { // Video Display
                                     AsyncImage( // Video thumbnail
@@ -663,14 +662,23 @@ fun VideoScreen(navController: NavController, video_id: String) {
                                         }
                                     }
 
-                                    Button(onClick = {
-                                        showAddPlaylist = false.apply { dialogue = false }
-                                    },
-                                        colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF3392EA)),
+                                    Button(
+                                        onClick = {
+                                            showAddPlaylist = false.apply { dialogue = false }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            backgroundColor = Color(
+                                                0xFF3392EA
+                                            )
+                                        ),
                                         modifier = Modifier.align(Alignment.CenterHorizontally),
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
-                                        Text(text = "Confirm", color = Color.White, fontFamily = montserrat_bold)
+                                        Text(
+                                            text = "Confirm",
+                                            color = Color.White,
+                                            fontFamily = montserrat_bold
+                                        )
                                     }
 
 
@@ -758,10 +766,11 @@ fun VideoScreen(navController: NavController, video_id: String) {
                             ) {
                                 Column() {
                                     Spacer(modifier = Modifier.height(11.dp))
-                                    val customTextSelectionColors = TextSelectionColors( // selection text color
-                                        handleColor = Color(0xFF24CAAC),
-                                        backgroundColor = Color(0xFF24CAAC).copy(alpha = 0.4f)
-                                    )
+                                    val customTextSelectionColors =
+                                        TextSelectionColors( // selection text color
+                                            handleColor = Color(0xFF24CAAC),
+                                            backgroundColor = Color(0xFF24CAAC).copy(alpha = 0.4f)
+                                        )
                                     CompositionLocalProvider(LocalTextSelectionColors provides customTextSelectionColors) {
                                         BasicTextField(
                                             // textfield
@@ -806,17 +815,26 @@ fun VideoScreen(navController: NavController, video_id: String) {
 
                                     Spacer(modifier = Modifier.height(50.dp))
 
-                                    Button(onClick = {
-                                        if (!text.isEmpty())
-                                            showCreateNewPlaylist = false
-                                        else
-                                            openNoTitleDialog = true
-                                    },
-                                        colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF3392EA)),
+                                    Button(
+                                        onClick = {
+                                            if (!text.isEmpty())
+                                                showCreateNewPlaylist = false
+                                            else
+                                                openNoTitleDialog = true
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            backgroundColor = Color(
+                                                0xFF3392EA
+                                            )
+                                        ),
                                         modifier = Modifier.align(Alignment.CenterHorizontally),
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
-                                        Text(text = "Confirm", color = Color.White, fontFamily = montserrat_bold)
+                                        Text(
+                                            text = "Confirm",
+                                            color = Color.White,
+                                            fontFamily = montserrat_bold
+                                        )
                                     }
 
                                 }
@@ -897,42 +915,50 @@ fun VideoScreen(navController: NavController, video_id: String) {
 fun YoutubeScreen(
     videoId: String,
     modifier: Modifier
-) {
+): Boolean {
     val context = LocalContext.current
     val activityLifecycle: LifecycleOwner = LocalLifecycleOwner.current
-    val options: IFramePlayerOptions = IFramePlayerOptions.Builder().controls(0).build()
-    var isPlaying by remember { mutableStateOf(false) }
-
-    val iFramePlayerOptions: IFramePlayerOptions = IFramePlayerOptions.Builder()
-        .controls(1)
-        .fullscreen(1) // enable full screen button
-        .build()
+    val options: IFramePlayerOptions =
+        IFramePlayerOptions.Builder().controls(0).build() // Creates embeded video
+    val tracker = YouTubePlayerTracker()
+    var state_ by remember { mutableStateOf("") }
 
     val youtubePlayer = remember {
         YouTubePlayerView(context).apply {
-            // Add custom layout
-            //inflateCustomPlayerUi(R.layout.custom_ui_layout)
             activityLifecycle.lifecycle.addObserver(this)
             enableAutomaticInitialization = false
             initialize(object : AbstractYouTubePlayerListener() {
                 override fun onReady(@NonNull youTubePlayer: YouTubePlayer) {
-                    //val playPauseButton = this@apply.findViewById<Button>(R.id.skip_next_button)
-                    youTubePlayer.cueVideo(videoId, 0f)
+                    youTubePlayer.loadVideo(videoId, 0f)
 
-                    /*
-                                        playPauseButton.setOnClickListener { view: View? ->
-                                            /*
-                                            if (isPlaying) youTubePlayer.pause() else youTubePlayer.play()
-                                            isPlaying = !isPlaying
-                                             */
-
-                                        }
-
-                     */
-
+                    youTubePlayer.addListener(tracker)
+                    Log.d("CurrentSecond", "" + (tracker.videoDuration))
                 }
+
+                override fun onStateChange(
+                    youTubePlayer: YouTubePlayer,
+                    state: PlayerConstants.PlayerState
+                ) {
+                    super.onStateChange(youTubePlayer, state)
+                    state_ = state.toString()
+                }
+
             }, options)
         }
+    }
+
+    Box(
+        modifier = Modifier
+            .background(Color.Transparent)
+    ) {
+        /*
+            Text(
+                text = state_,
+                color = Color.White,
+                modifier = Modifier.align(Alignment.Center)
+            )
+                    */
+
     }
 
     AndroidView(
@@ -941,6 +967,9 @@ fun YoutubeScreen(
         }, modifier = modifier
     )
 
+    if (state_ == "ENDED")
+        return true
 
+    return false
 }
 

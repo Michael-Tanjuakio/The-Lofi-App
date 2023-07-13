@@ -39,22 +39,24 @@ data class videoDisplay(var videoTitle: String)
 @Composable
 fun HomeScreen(title: String, search: String, navController: NavController) {
 
-    // System bar colors
-    val systemUiController = rememberSystemUiController()
-    systemUiController.setStatusBarColor(color = Color(0xFF24CAAC))
-    systemUiController.setNavigationBarColor(color = Color(0xFF24CAAC))
-
+    // dummy data (remove later)
     val list = listOf("1", "1", "1", "1") // placeholder
     val video_id = "jfKfPfyJRdk" // video-id example
     val fullsize_path_img: String =
         "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
-    var text by remember { mutableStateOf("") }
 
-    // Whole UI
-    val scrollState = rememberScrollState() // vertically scrollable
+    // System bar colors
+    val systemUiController = rememberSystemUiController()
+    systemUiController.setStatusBarColor(color = Color(0xFF24CAAC))         // System top bar color
+    systemUiController.setNavigationBarColor(color = Color(0xFF24CAAC))     // System bottom bar color
 
+    // Scroll State (used for vertical scrolling)
+    val scrollState = rememberScrollState()
+
+    // Scaffold (Top bar, Content, Bottom Bar)
     Scaffold(
-        topBar = {    // Top Bar
+        topBar = {
+            // Top Bar Composable
             TopAppBar(
                 title = {
                     Text(
@@ -66,9 +68,9 @@ fun HomeScreen(title: String, search: String, navController: NavController) {
                 },
                 backgroundColor = Color(0xFF24CAAC),
                 actions = {
-                    // Search Button
+                    // Search Button - navigates to search screen
                     IconButton(onClick = { navController.navigate(ScreenRoutes.SearchScreen.route) }) {
-                        Icon(
+                        Icon( // Search icon
                             imageVector = MenuAction.Search.icon,
                             contentDescription = stringResource(MenuAction.Search.label),
                             tint = Color.White,
@@ -80,11 +82,12 @@ fun HomeScreen(title: String, search: String, navController: NavController) {
                 }
             )
         },
+        // Content
         content = { padding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(state = scrollState)
+                    .verticalScroll(state = scrollState) // scrollState here
             ) {
                 // Recommended Text
                 Row(modifier = Modifier.padding(top = 45.dp, start = 30.dp)) {
@@ -112,7 +115,7 @@ fun HomeScreen(title: String, search: String, navController: NavController) {
                             .padding(start = 16.dp)
                             .clip(RoundedCornerShape(12, 12, 5, 5))
                             .clickable {
-                                navController.navigate(ScreenRoutes.VideoScreen.route)
+                                navController.navigate("VideoScreen/Ll9zSkf4Cfw") // navigates to video screen
                             }
                         ) { // Video Display
                             // {
@@ -124,7 +127,7 @@ fun HomeScreen(title: String, search: String, navController: NavController) {
                                     .size(width = 220.dp, height = 134.dp)
                                     .clip(RoundedCornerShape(12))
                             )
-                            Text( // Video name
+                            Text( // Video name (replace this
                                 text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
                                 maxLines = 2,
                                 modifier = Modifier
