@@ -18,23 +18,26 @@ import com.example.lofiapp.screens.HomeScreen
 import com.example.lofiapp.screens.SearchScreen
 import com.example.lofiapp.screens.VideoScreen
 import com.example.lofiapp.screens.PlaylistScreen
+import com.example.lofiapp.screens.SplashScreen
 
 @Composable
 fun Navigation() {
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = ScreenRoutes.HomeScreen.route) {
+    NavHost(
+        navController = navController,
+        startDestination = ScreenRoutes.SplashScreen.route
+    ) {
+        composable(route = ScreenRoutes.SplashScreen.route) {
+            SplashScreen(navController)
+        }
         composable(route = ScreenRoutes.HomeScreen.route) { // home screen
-            HomeScreen(
-                stringResource(R.string.app_name),
-                stringResource(R.string.Search),
-                navController
-            )
+            HomeScreen(navController)
         }
         composable(route = ScreenRoutes.SearchScreen.route) {// search screen
             SearchScreen(navController = navController)
         }
         composable( // video screen
-            route = "VideoScreen/{video_id}",
+            route = "video_screen/{video_id}",
             arguments = listOf(
                 navArgument("video_id") {type = NavType.StringType}
             )) { backStackEntry ->

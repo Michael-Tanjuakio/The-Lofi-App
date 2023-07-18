@@ -1,5 +1,7 @@
 package com.example.lofiapp.screens
 
+
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -33,11 +35,18 @@ import com.example.lofiapp.ui.theme.flamenco_regular
 import com.example.lofiapp.ui.theme.montserrat_bold
 import com.example.lofiapp.ui.theme.montserrat_light
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.IgnoreExtraProperties
+import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.ktx.database
+import com.google.firebase.database.ktx.getValue
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 
-data class videoDisplay(var videoTitle: String)
 
 @Composable
-fun HomeScreen(title: String, search: String, navController: NavController) {
+fun HomeScreen(navController: NavController) {
 
     // dummy data (remove later)
     val list = listOf("1", "1", "1", "1") // placeholder
@@ -60,7 +69,7 @@ fun HomeScreen(title: String, search: String, navController: NavController) {
             TopAppBar(
                 title = {
                     Text(
-                        text = title,
+                        text = "lofiapp",
                         color = Color.White,
                         fontFamily = flamenco_regular,
                         fontSize = 32.sp
@@ -115,7 +124,7 @@ fun HomeScreen(title: String, search: String, navController: NavController) {
                             .padding(start = 16.dp)
                             .clip(RoundedCornerShape(12, 12, 5, 5))
                             .clickable {
-                                navController.navigate("VideoScreen/Ll9zSkf4Cfw") // navigates to video screen
+                                navController.navigate(ScreenRoutes.VideoScreen.route) // navigates to video screen
                             }
                         ) { // Video Display
                             // {
