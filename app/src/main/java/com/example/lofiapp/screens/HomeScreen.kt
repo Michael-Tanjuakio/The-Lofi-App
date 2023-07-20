@@ -37,22 +37,74 @@ import com.example.lofiapp.ui.theme.montserrat_light
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.IgnoreExtraProperties
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ktx.database
 import com.google.firebase.database.ktx.getValue
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import java.util.Random
+import kotlin.random.nextInt
 
 
 @Composable
 fun HomeScreen(navController: NavController) {
 
-    // dummy data (remove later)
-    val list = listOf("1", "1", "1", "1") // placeholder
-    val video_id = "jfKfPfyJRdk" // video-id example
-    val fullsize_path_img: String =
-        "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
+    val database = Firebase.database
+    var recVideo1: youtubeVideo? by remember { mutableStateOf( youtubeVideo("",""))}
+    var recVideo2: youtubeVideo? by remember { mutableStateOf( youtubeVideo("",""))}
+    var recVideo3: youtubeVideo? by remember { mutableStateOf( youtubeVideo("",""))}
+    var recVideo4: youtubeVideo? by remember { mutableStateOf( youtubeVideo("",""))}
+
+    // Read from the database
+    LaunchedEffect(true) {
+
+        val randomInts = generateSequence { (1..15).random() }
+            .distinct()
+            .take(4)
+            .toSet()
+
+        Log.d("RNG", "" + randomInts.elementAt(0).toString())
+        Log.d("RNG", "" + randomInts.elementAt(1).toString())
+        Log.d("RNG", "" + randomInts.elementAt(2).toString())
+        Log.d("RNG", "" + randomInts.elementAt(3).toString())
+
+
+        database.getReference("video" + randomInts.elementAt(0).toString())
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    recVideo1 = dataSnapshot.getValue<youtubeVideo>()
+                }
+                override fun onCancelled(error: DatabaseError) {}
+            })
+        database.getReference("video" + randomInts.elementAt(1).toString())
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    recVideo2 = dataSnapshot.getValue<youtubeVideo>()
+                }
+                override fun onCancelled(error: DatabaseError) {}
+            })
+
+        database.getReference("video" + randomInts.elementAt(2).toString())
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    recVideo3 = dataSnapshot.getValue<youtubeVideo>()
+                }
+                override fun onCancelled(error: DatabaseError) {}
+            })
+
+        database.getReference("video" + randomInts.elementAt(3).toString())
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    recVideo4 = dataSnapshot.getValue<youtubeVideo>()
+                }
+                override fun onCancelled(error: DatabaseError) {}
+            })
+    }
+
+    // list of videos
+    val list = listOf(recVideo1, recVideo2, recVideo3, recVideo4)
 
     // System bar colors
     val systemUiController = rememberSystemUiController()
@@ -124,12 +176,12 @@ fun HomeScreen(navController: NavController) {
                             .padding(start = 16.dp)
                             .clip(RoundedCornerShape(12, 12, 5, 5))
                             .clickable {
-                                navController.navigate(ScreenRoutes.VideoScreen.route) // navigates to video screen
+                                navController.navigate("video_screen/" + item?.videoID.toString()) // navigates to video screen
                             }
                         ) { // Video Display
                             // {
                             AsyncImage( // Video thumbnail
-                                model = fullsize_path_img,
+                                model = "https://img.youtube.com/vi/" + item?.videoID.toString() + "/hqdefault.jpg",
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
@@ -137,7 +189,7 @@ fun HomeScreen(navController: NavController) {
                                     .clip(RoundedCornerShape(12))
                             )
                             Text( // Video name (replace this
-                                text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
+                                text = item?.videoTitle.toString(),
                                 maxLines = 2,
                                 modifier = Modifier
                                     .width(220.dp)
@@ -173,15 +225,15 @@ fun HomeScreen(navController: NavController) {
                     items(items = list, itemContent = { item ->
                         Column(
                             modifier = Modifier
-                                            .padding(start = 16.dp)
-                                            .clip(RoundedCornerShape(12, 12, 5, 5))
-                                            .clickable{
-                                                navController.navigate(ScreenRoutes.PlaylistScreen.route)
-                                            }
+                                .padding(start = 16.dp)
+                                .clip(RoundedCornerShape(12, 12, 5, 5))
+                                .clickable {
+                                    navController.navigate(ScreenRoutes.PlaylistScreen.route)
+                                }
                         ) {
                             Box() {
                                 AsyncImage( // Video Thumbnail
-                                    model = fullsize_path_img,
+                                    model = "https://img.youtube.com/vi/" + item?.videoID.toString() + "/hqdefault.jpg",
                                     contentDescription = null,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
@@ -246,14 +298,14 @@ fun HomeScreen(navController: NavController) {
             // Bottom bar (Displays what video is played)
             BottomNavigation(
                 modifier = Modifier
-                                .clickable {
-                                    navController.navigate(ScreenRoutes.VideoScreen.route)
-                                },
+                    .clickable {
+                        navController.navigate(ScreenRoutes.VideoScreen.route)
+                    },
                 backgroundColor = Color(0xFF3392EA)
             ) {
                 Row() { // wrap in row to avoid default spacing
                     AsyncImage( // video thumbnail
-                        model = fullsize_path_img,
+                        model = "https://img.youtube.com/vi/" + "" + "/hqdefault.jpg",
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
