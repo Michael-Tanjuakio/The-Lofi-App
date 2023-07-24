@@ -37,6 +37,7 @@ import com.example.lofiapp.data.ScreenRoutes
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.IgnoreExtraProperties
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ktx.database
@@ -122,112 +123,97 @@ fun SplashScreen(navController: NavController) {
     // Enter data to the database
     LaunchedEffect(true) {
         val database = Firebase.database
-
-        database.getReference("video1").setValue(
+        val videos = FirebaseDatabase.getInstance().getReference("videos")
+        videos.child("video1").setValue(
             youtubeVideo(
                 "Rainy Jazz Cafe - Slow Jazz Music in Coffee Shop Ambience for Work, Study and Relaxation",
                 "NJuSStkIZBg"
             )
         )
-        database.getReference("video2").setValue(
+        videos.child("video2").setValue(
             youtubeVideo(
                 "Breathe \uD83C\uDF40 Lofi Deep Focus \uD83C\uDF33 Study/Calm/Heal [ Lofi Hip Hop - Lofi Chill ] ",
                 "6H-PLF2CR18"
             )
         )
-        database.getReference("video3").setValue(
+        videos.child("video3").setValue(
             youtubeVideo(
-                "No Copyright | Calm Jazz Music | Background Chill | Café Music | Relaxing Work & Study",
-                "DVEUcbPkb"
+                "Calm Jazz Music | Background Chill | Cafe Music | Relaxing Work & Study",
+                "Zf3kjcmWcos"
             )
         )
-        database.getReference("video4").setValue(
+        videos.child("video4").setValue(
             youtubeVideo(
                 "a rainy afternoon in sweden ~ nordic lofi mix",
                 "-EY97tZAkNY"
             )
         )
-        database.getReference("video5").setValue(
+        videos.child("video5").setValue(
             youtubeVideo(
                 "Popular Anime Openings But It's Lofi Remix ~ Best Anime Lofi Hip Hop Mix",
                 "CtwQuK5pB3Q"
             )
         )
-        database.getReference("video6").setValue(
+        videos.child("video6").setValue(
             youtubeVideo(
                 "Poké & Chill",
                 "2DVpys50LVE"
             )
         )
-        database.getReference("video7").setValue(
+        videos.child("video7").setValue(
             youtubeVideo(
                 "Chill Lofi Mix chill lo fi hip hop beats",
                 "AkWyMHevVjk"
             )
         )
-        database.getReference("video8").setValue(
+        videos.child("video8").setValue(
             youtubeVideo(
                 "When Everything Is Gone - Lofi Hip Hop Mix | Chill Beats",
                 "ihBlOSkbJTc"
             )
         )
-        database.getReference("video9").setValue(
+        videos.child("video9").setValue(
             youtubeVideo(
                 "After Sunset- Lofi Hip Hop Mix | Chill Beats | Free background Music",
                 "31sy0CZHDgE"
             )
         )
-        database.getReference("video10").setValue(
+        videos.child("video10").setValue(
             youtubeVideo(
                 "Stardew & Chill",
                 "yEPUhesWICA"
             )
         )
-        database.getReference("video11").setValue(
+        videos.child("video11").setValue(
             youtubeVideo(
                 "Lofi Mix | 1 hour of Chill Music | Best Music Beat 2021 ",
                 "lQDS7ryK2qo"
             )
         )
-        database.getReference("video12").setValue(
+        videos.child("video12").setValue(
             youtubeVideo(
                 "lofi beats by James | code, relax, study, stream | no copyright",
                 "eRNClZgJzd4"
             )
         )
-        database.getReference("video13").setValue(
+        videos.child("video13").setValue(
             youtubeVideo(
                 "Lofi Mix 2 - Stress Relief Relaxing Music",
                 "6VapvDlN4pg"
             )
         )
-        database.getReference("video14").setValue(
+        videos.child("video14").setValue(
             youtubeVideo(
                 "No Copyright Music Playlist - 20 Minutes Lofi Hip Hop Mix",
                 "pxPWEudVo3M"
             )
         )
-        database.getReference("video15").setValue(
+        videos.child("video15").setValue(
             youtubeVideo(
                 "Tavern/Inn Music - Fantasy Medieval Music (No Copyright) Vol. 2",
                 "roABNwbjZf4"
             )
         )
-
-        // Read from the database
-        database.getReference("video" + (1..15).random()).addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(dataSnapshot: DataSnapshot) {
-                val value = dataSnapshot.getValue<youtubeVideo>()
-                Log.d(
-                    "database!!!",
-                    "test: Video Title: " + value?.videoTitle + "\nVideoID: " + value?.videoID
-                )
-            }
-            override fun onCancelled(error: DatabaseError) {
-                // Failed to read value
-                Log.w("database!!!", "Failed to read value.", error.toException())
-            }
-        })
     }
 
 
@@ -238,7 +224,7 @@ fun SplashScreen(navController: NavController) {
             ticks++
         }
     }
-    if (ticks == 3)
+    if (ticks == 3) // Launches app in 3 seconds
         LaunchedEffect(Unit) {
             navController.navigate(ScreenRoutes.HomeScreen.route)
         }

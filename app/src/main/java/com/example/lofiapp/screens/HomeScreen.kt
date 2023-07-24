@@ -1,11 +1,18 @@
 package com.example.lofiapp.screens
 
-
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import android.app.Activity
+import android.content.pm.ActivityInfo
 import android.util.Log
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -20,6 +27,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -44,21 +53,43 @@ import com.google.firebase.database.ktx.database
 import com.google.firebase.database.ktx.getValue
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.Random
 import kotlin.random.nextInt
 
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun HomeScreen(navController: NavController) {
 
-    val database = Firebase.database
-    var recVideo1: youtubeVideo? by remember { mutableStateOf( youtubeVideo("",""))}
-    var recVideo2: youtubeVideo? by remember { mutableStateOf( youtubeVideo("",""))}
-    var recVideo3: youtubeVideo? by remember { mutableStateOf( youtubeVideo("",""))}
-    var recVideo4: youtubeVideo? by remember { mutableStateOf( youtubeVideo("",""))}
+    val refreshScope = rememberCoroutineScope()
+    var refreshing by remember { mutableStateOf(false) }
+    var itemCount by remember { mutableStateOf(15) }
+
+    fun refresh() = refreshScope.launch {
+        refreshing = true
+        delay(1500)
+        itemCount += 5
+        refreshing = false
+    }
+
+    val state = rememberPullRefreshState(refreshing, ::refresh)
+
+    val context = LocalContext.current
+    val activity = remember { context as Activity }
+    activity.requestedOrientation =
+        ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+
+    val videos = FirebaseDatabase.getInstance().getReference("videos")
+    var recVideo1: youtubeVideo? by remember { mutableStateOf(youtubeVideo("", "")) }
+    var recVideo2: youtubeVideo? by remember { mutableStateOf(youtubeVideo("", "")) }
+    var recVideo3: youtubeVideo? by remember { mutableStateOf(youtubeVideo("", "")) }
+    var recVideo4: youtubeVideo? by remember { mutableStateOf(youtubeVideo("", "")) }
+    var randomVideo: youtubeVideo? by remember { mutableStateOf(youtubeVideo("", "")) }
 
     // Read from the database
-    LaunchedEffect(true) {
+    LaunchedEffect(itemCount) {
 
         val randomInts = generateSequence { (1..15).random() }
             .distinct()
@@ -71,34 +102,46 @@ fun HomeScreen(navController: NavController) {
         Log.d("RNG", "" + randomInts.elementAt(3).toString())
 
 
-        database.getReference("video" + randomInts.elementAt(0).toString())
+        videos.child("video" + randomInts.elementAt(0).toString())
             .addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
                     recVideo1 = dataSnapshot.getValue<youtubeVideo>()
                 }
+
                 override fun onCancelled(error: DatabaseError) {}
             })
-        database.getReference("video" + randomInts.elementAt(1).toString())
+        videos.child("video" + randomInts.elementAt(1).toString())
             .addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
                     recVideo2 = dataSnapshot.getValue<youtubeVideo>()
                 }
+
                 override fun onCancelled(error: DatabaseError) {}
             })
 
-        database.getReference("video" + randomInts.elementAt(2).toString())
+        videos.child("video" + randomInts.elementAt(2).toString())
             .addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
                     recVideo3 = dataSnapshot.getValue<youtubeVideo>()
                 }
+
                 override fun onCancelled(error: DatabaseError) {}
             })
 
-        database.getReference("video" + randomInts.elementAt(3).toString())
+        videos.child("video" + randomInts.elementAt(3).toString())
             .addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
                     recVideo4 = dataSnapshot.getValue<youtubeVideo>()
                 }
+
+                override fun onCancelled(error: DatabaseError) {}
+            })
+        videos.child("video" + (1..15).random())
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    randomVideo = dataSnapshot.getValue<youtubeVideo>()
+                }
+
                 override fun onCancelled(error: DatabaseError) {}
             })
     }
@@ -145,153 +188,165 @@ fun HomeScreen(navController: NavController) {
         },
         // Content
         content = { padding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(state = scrollState) // scrollState here
-            ) {
-                // Recommended Text
-                Row(modifier = Modifier.padding(top = 45.dp, start = 30.dp)) {
-                    Text(
-                        text = "Recommended",
-                        color = Color(0xFF24CAAC),
-                        modifier = Modifier,
-                        fontSize = 21.sp,
-                        fontFamily = montserrat_bold
-                    )
-                    Image( // Symbol
-                        painter = painterResource(id = R.drawable.video_library_icon),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .padding(start = 10.dp)
-                            .size(34.dp),
-                        colorFilter = ColorFilter.tint(color = Color(0xFF5686E1))
-                    )
-                }
-
-                // Recommended Videos Display (horz. scroll)
-                LazyRow(modifier = Modifier.padding(start = 13.dp, top = 6.dp)) {
-                    items(items = list, itemContent = { item ->
-                        Column(modifier = Modifier
-                            .padding(start = 16.dp)
-                            .clip(RoundedCornerShape(12, 12, 5, 5))
-                            .clickable {
-                                navController.navigate("video_screen/" + item?.videoID.toString()) // navigates to video screen
-                            }
-                        ) { // Video Display
-                            // {
-                            AsyncImage( // Video thumbnail
-                                model = "https://img.youtube.com/vi/" + item?.videoID.toString() + "/hqdefault.jpg",
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(width = 220.dp, height = 134.dp)
-                                    .clip(RoundedCornerShape(12))
-                            )
-                            Text( // Video name (replace this
-                                text = item?.videoTitle.toString(),
-                                maxLines = 2,
-                                modifier = Modifier
-                                    .width(220.dp)
-                                    .height(IntrinsicSize.Max),
-                                fontSize = 16.sp,
-                                fontFamily = montserrat_light
-                            )
-                        }
-                    })
-                }
-
-                // Playlists Text
-                Row(modifier = Modifier.padding(top = 30.dp, start = 29.dp)) {
-                    Text(
-                        text = "Playlists",
-                        color = Color(0xFF24CAAC),
-                        modifier = Modifier,
-                        fontSize = 21.sp,
-                        fontFamily = montserrat_bold
-                    )
-                    Image( // Symbol
-                        painter = painterResource(id = R.drawable.playlist_icon),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .padding(start = 10.dp)
-                            .size(34.dp),
-                        colorFilter = ColorFilter.tint(color = Color(0xFF5686E1))
-                    )
-                }
-
-                // Playlists display (horz. scroll)
-                LazyRow(modifier = Modifier.padding(start = 13.dp, top = 6.dp)) {
-                    items(items = list, itemContent = { item ->
-                        Column(
+            Box(Modifier.pullRefresh(state)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(state = scrollState) // scrollState here
+                    ,
+                    verticalArrangement = Arrangement.SpaceAround
+                ) {
+                    // Recommended Text
+                    Row(modifier = Modifier.padding(top = 45.dp, start = 30.dp)) {
+                        Text(
+                            text = "Recommended",
+                            color = Color(0xFF24CAAC),
+                            modifier = Modifier,
+                            fontSize = 21.sp,
+                            fontFamily = montserrat_bold
+                        )
+                        Image( // Symbol
+                            painter = painterResource(id = R.drawable.video_library_icon),
+                            contentDescription = null,
                             modifier = Modifier
+                                .padding(start = 10.dp)
+                                .size(34.dp),
+                            colorFilter = ColorFilter.tint(color = Color(0xFF5686E1))
+                        )
+                    }
+
+                    // Recommended Videos Display (horz. scroll)
+                    Row(
+                        modifier = Modifier
+                            .padding(start = 13.dp, top = 6.dp)
+                            .height(IntrinsicSize.Max)
+                            .horizontalScroll(rememberScrollState())
+                    ) {
+                        list.forEach { item ->
+                            Column(modifier = Modifier
                                 .padding(start = 16.dp)
                                 .clip(RoundedCornerShape(12, 12, 5, 5))
                                 .clickable {
-                                    navController.navigate(ScreenRoutes.PlaylistScreen.route)
+                                    navController.navigate("video_screen/" + item?.videoID.toString()) // navigates to video screen
                                 }
-                        ) {
-                            Box() {
-                                AsyncImage( // Video Thumbnail
-                                    model = "https://img.youtube.com/vi/" + item?.videoID.toString() + "/hqdefault.jpg",
+                            ) { // Video Display
+                                // {
+                                AsyncImage( // Video thumbnail
+                                    model = "https://img.youtube.com/vi/" + item?.videoID.toString() + "/maxres2.jpg",
                                     contentDescription = null,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
                                         .size(width = 220.dp, height = 134.dp)
                                         .clip(RoundedCornerShape(12))
                                 )
-                                Box( // Transparent background
+                                Text( // Video name
+                                    text = item?.videoTitle.toString(),
+                                    maxLines = 4,
                                     modifier = Modifier
-                                        .size(width = 105.dp, height = 134.dp)
-                                        .clip(RoundedCornerShape(0.dp, 15.dp, 15.dp, 0.dp))
-                                        .background(Color(0xFF404040).copy(alpha = 0.6f))
-                                        .align(alignment = Alignment.TopEnd)
-                                ) {
-                                    Text( // Number of videos in playlist
-                                        text = "5",
-                                        modifier = Modifier
-                                            .align(alignment = Alignment.Center),
-                                        color = Color.White,
-                                        fontFamily = montserrat_light
-                                    )
-                                }
+                                        .width(220.dp),
+                                    fontSize = 16.sp,
+                                    fontFamily = montserrat_light
+                                )
                             }
-                            Text( // Playlist Name
-                                text = "city pop playlist",
-                                maxLines = 2,
-                                modifier = Modifier
-                                    .width(220.dp)
-                                    .height(IntrinsicSize.Max),
-                                fontSize = 16.sp,
-                                fontFamily = montserrat_light
-                            )
                         }
-                    })
+                    }
+
+                    // Playlists Text
+                    Row(modifier = Modifier.padding(top = 30.dp, start = 29.dp)) {
+                        Text(
+                            text = "Playlists",
+                            color = Color(0xFF24CAAC),
+                            modifier = Modifier,
+                            fontSize = 21.sp,
+                            fontFamily = montserrat_bold
+                        )
+                        Image( // Symbol
+                            painter = painterResource(id = R.drawable.playlist_icon),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .padding(start = 10.dp)
+                                .size(34.dp),
+                            colorFilter = ColorFilter.tint(color = Color(0xFF5686E1))
+                        )
+                    }
+
+                    // Playlists display (horz. scroll)
+                    LazyRow(modifier = Modifier.padding(start = 13.dp, top = 6.dp)) {
+                        items(items = list, itemContent = { item ->
+                            Column(
+                                modifier = Modifier
+                                    .padding(start = 16.dp)
+                                    .clip(RoundedCornerShape(12, 12, 5, 5))
+                                    .clickable {
+                                        navController.navigate(ScreenRoutes.PlaylistScreen.route)
+                                    }
+                            ) {
+                                Box() {
+                                    AsyncImage( // Video Thumbnail
+                                        model = "https://img.youtube.com/vi/" + item?.videoID.toString() + "/maxres2.jpg",
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(width = 220.dp, height = 134.dp)
+                                            .clip(RoundedCornerShape(12))
+                                    )
+                                    Box( // Transparent background
+                                        modifier = Modifier
+                                            .size(width = 105.dp, height = 134.dp)
+                                            .clip(RoundedCornerShape(0.dp, 15.dp, 15.dp, 0.dp))
+                                            .background(Color(0xFF404040).copy(alpha = 0.6f))
+                                            .align(alignment = Alignment.TopEnd)
+                                    ) {
+                                        Text( // Number of videos in playlist
+                                            text = "5",
+                                            modifier = Modifier
+                                                .align(alignment = Alignment.Center),
+                                            color = Color.White,
+                                            fontFamily = montserrat_light
+                                        )
+                                    }
+                                }
+                                Text( // Playlist Name
+                                    text = "city pop playlist",
+                                    maxLines = 2,
+                                    modifier = Modifier
+                                        .width(220.dp)
+                                        .height(IntrinsicSize.Max),
+                                    fontSize = 16.sp,
+                                    fontFamily = montserrat_light
+                                )
+                            }
+                        })
+                    }
+
+                    Spacer(modifier = Modifier.height(25.dp))
+
+                    // Random video button
+                    FloatingActionButton(
+                        onClick = {
+                            navController.navigate("video_screen/" + randomVideo?.videoID.toString())
+                        },
+                        contentColor = Color(0xFF24CAAC),
+                        shape = RoundedCornerShape(50.dp),
+                        modifier = Modifier
+                            .size(75.dp)
+                            .align(Alignment.CenterHorizontally)
+                            .padding(top = 0.dp, bottom = 0.dp)
+                    )
+                    {
+                        Image( // shuffle symbol
+                            painter = painterResource(id = R.drawable.shuffle_icon),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .align(Alignment.CenterHorizontally),
+                            colorFilter = ColorFilter.tint(color = Color.White)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(80.dp))
                 }
 
-                // Random video button
-                Canvas(
-                    modifier = Modifier
-                        .size(size = 70.dp)
-                        .padding(top = 93.dp)
-                        .align(Alignment.CenterHorizontally)
-                        .clickable {
-                            navController.navigate(ScreenRoutes.VideoScreen.route)
-                        }
-                ) {
-                    drawCircle( // green circle background
-                        color = Color(0xFF24CAAC),
-                        radius = 40.dp.toPx()
-                    )
-                }
-                Image( // shuffle symbol
-                    painter = painterResource(id = R.drawable.shuffle_icon),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .padding(bottom = 100.dp)
-                        .align(Alignment.CenterHorizontally),
-                    colorFilter = ColorFilter.tint(color = Color.White)
-                )
+                PullRefreshIndicator(refreshing, state, Modifier.align(Alignment.TopCenter))
             }
         },
         bottomBar = {
@@ -346,6 +401,7 @@ fun HomeScreen(navController: NavController) {
     )
 
 }
+
 
 @Preview(showBackground = true)
 @Composable

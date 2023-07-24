@@ -1,7 +1,9 @@
 package com.example.lofiapp.screens
 
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -30,6 +33,7 @@ import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -57,12 +61,50 @@ import com.example.lofiapp.data.ScreenRoutes
 import com.example.lofiapp.ui.theme.flamenco_regular
 import com.example.lofiapp.ui.theme.montserrat_bold
 import com.example.lofiapp.ui.theme.montserrat_light
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.ktx.database
+import com.google.firebase.database.ktx.getValue
+import com.google.firebase.ktx.Firebase
+import java.util.Locale
 
 
 @Composable
 fun SearchScreen(navController: NavController) {
 
-    val list = listOf("1", "1", "1", "1", "1", "1", "1", "1") // placeholder
+    val list = remember{mutableStateListOf<youtubeVideo?>()}
+
+    val database = Firebase.database
+    val videos = FirebaseDatabase.getInstance().getReference("videos")
+
+    fun searchByName(name: String) {
+        videos.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                if (name.isEmpty())
+                    list.clear()
+                else {
+                    if (snapshot.exists()) {
+                        list.clear()
+                        Log.d("Found video", "CLEAR LIST")
+                        for (i in snapshot.children) {
+                            val video = i.getValue<youtubeVideo>()
+                            if (video?.videoTitle.toString().lowercase().contains(name.lowercase())) {
+                                list.add(video)
+                                Log.d("Found video", "" + video?.videoTitle.toString())
+                            }
+                        }
+                    }
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {}
+        })
+    }
+
+
+    val list_ = listOf("1", "1", "1", "1", "1", "1", "1", "1") // placeholder
     val video_id = "jfKfPfyJRdk" // video-id example
     val fullsize_path_img =
         "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
@@ -106,7 +148,10 @@ fun SearchScreen(navController: NavController) {
                     BasicTextField(
                         // textfield
                         value = text,
-                        onValueChange = { newText -> text = newText },
+                        onValueChange = { newText ->
+                            text = newText
+                            searchByName(text)
+                        },
                         textStyle = TextStyle(
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Medium,
@@ -150,6 +195,7 @@ fun SearchScreen(navController: NavController) {
             // Searched Videos Display (vertical. scroll)
             LazyColumn(modifier = Modifier.padding(top = 20.dp, bottom = 50.dp)) {
                 items(items = list, itemContent = { item ->
+                    Log.d("Found video", "Show list" )
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -159,12 +205,12 @@ fun SearchScreen(navController: NavController) {
                             .clip(RoundedCornerShape(12, 12, 5, 5))
                             .align(CenterHorizontally)
                             .clickable {
-                                navController.navigate(ScreenRoutes.VideoScreen.route)
+                                navController.navigate("video_screen/" + item?.videoID.toString())
                             }
                         ) {
                             Column() {
                                 AsyncImage( // Video thumbnail
-                                    model = fullsize_path_img,
+                                    model = "https://img.youtube.com/vi/" + item?.videoID.toString() + "/maxres2.jpg",
                                     contentDescription = null,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
@@ -172,12 +218,12 @@ fun SearchScreen(navController: NavController) {
                                         .clip(RoundedCornerShape(12))
                                 )
                                 Text( // Video name
-                                    text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
-                                    maxLines = 2,
+                                    text = item?.videoTitle.toString(),
+                                    maxLines = 4,
                                     modifier = Modifier
                                         .padding(start = 0.dp, top = 2.dp)
                                         .width(270.dp)
-                                        .height(IntrinsicSize.Max),
+                                        .wrapContentHeight(),
                                     fontSize = 16.sp,
                                     fontFamily = montserrat_light
                                 )

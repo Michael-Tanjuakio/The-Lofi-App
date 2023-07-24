@@ -106,5 +106,7 @@ dependencies {
     // When using the BoM, you don't specify versions in Firebase library dependencies
     implementation("com.google.firebase:firebase-database-ktx")
 
+    implementation "androidx.compose.material:material:1.5.0-alpha03"
+
 
 }
