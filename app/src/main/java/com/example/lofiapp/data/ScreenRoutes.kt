@@ -9,5 +9,7 @@ sealed class ScreenRoutes(val route: String) {
     object PlaylistScreen: ScreenRoutes("playlist_screen")
     object EditPlaylistScreen: ScreenRoutes("edit_playlist_screen")
 
+    object CreatePlaylistScreen: ScreenRoutes("create_playlist_screen")
+
 
 }

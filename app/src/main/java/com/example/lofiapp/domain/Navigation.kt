@@ -13,6 +13,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.lofiapp.R
 import com.example.lofiapp.data.ScreenRoutes
+import com.example.lofiapp.screens.CreatePlaylistScreen
 import com.example.lofiapp.screens.EditPlaylistScreen
 import com.example.lofiapp.screens.HomeScreen
 import com.example.lofiapp.screens.SearchScreen
@@ -49,6 +50,9 @@ fun Navigation() {
         }
         composable(route = ScreenRoutes.EditPlaylistScreen.route) {// Edit playlist screen
             EditPlaylistScreen(navController = navController)
+        }
+        composable(route = ScreenRoutes.CreatePlaylistScreen.route) {// Edit playlist screen
+            CreatePlaylistScreen(navController = navController)
         }
     }
 }

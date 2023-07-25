@@ -75,8 +75,6 @@ import java.util.Locale
 fun SearchScreen(navController: NavController) {
 
     val list = remember{mutableStateListOf<youtubeVideo?>()}
-
-    val database = Firebase.database
     val videos = FirebaseDatabase.getInstance().getReference("videos")
 
     fun searchByName(name: String) {
@@ -98,18 +96,10 @@ fun SearchScreen(navController: NavController) {
                     }
                 }
             }
-
             override fun onCancelled(error: DatabaseError) {}
         })
     }
-
-
-    val list_ = listOf("1", "1", "1", "1", "1", "1", "1", "1") // placeholder
-    val video_id = "jfKfPfyJRdk" // video-id example
-    val fullsize_path_img =
-        "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
     var text by remember { mutableStateOf("") }
-    val scrollState = rememberScrollState() // vertically scrollable
 
     Scaffold(
         topBar = {
@@ -244,7 +234,7 @@ fun SearchScreen(navController: NavController) {
             ) {
                 Row() { // wrap in row to avoid default spacing
                     AsyncImage( // video thumbnail
-                        model = fullsize_path_img,
+                        model = null,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier

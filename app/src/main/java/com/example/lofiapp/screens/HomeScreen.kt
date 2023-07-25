@@ -8,10 +8,12 @@ import android.content.pm.ActivityInfo
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -59,7 +61,7 @@ import java.util.Random
 import kotlin.random.nextInt
 
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterialApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(navController: NavController) {
 
@@ -172,6 +174,18 @@ fun HomeScreen(navController: NavController) {
                 },
                 backgroundColor = Color(0xFF24CAAC),
                 actions = {
+                    // Create Playlist button
+                    IconButton(
+                        onClick = { navController.navigate(ScreenRoutes.CreatePlaylistScreen.route) }
+                    ) {
+                        Image( // Search icon
+                            painter = painterResource(id = R.drawable.playlist_add_icon),
+                            contentDescription = null,
+                            colorFilter = ColorFilter.tint(color = Color.White),
+                            modifier = Modifier
+                                .size(35.dp)
+                        )
+                    }
                     // Search Button - navigates to search screen
                     IconButton(onClick = { navController.navigate(ScreenRoutes.SearchScreen.route) }) {
                         Icon( // Search icon
@@ -180,7 +194,6 @@ fun HomeScreen(navController: NavController) {
                             tint = Color.White,
                             modifier = Modifier
                                 .size(30.dp)
-                                .padding(top = 5.dp)
                         )
                     }
                 }
@@ -226,9 +239,11 @@ fun HomeScreen(navController: NavController) {
                             Column(modifier = Modifier
                                 .padding(start = 16.dp)
                                 .clip(RoundedCornerShape(12, 12, 5, 5))
-                                .clickable {
-                                    navController.navigate("video_screen/" + item?.videoID.toString()) // navigates to video screen
-                                }
+                                .combinedClickable(
+                                    // navigates to video screen
+                                    onClick = {navController.navigate("video_screen/" + item?.videoID.toString()) },
+                                    onLongClick = {}
+                                )
                             ) { // Video Display
                                 // {
                                 AsyncImage( // Video thumbnail
