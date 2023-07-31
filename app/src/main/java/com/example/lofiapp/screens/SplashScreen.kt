@@ -47,7 +47,17 @@ import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
 
 @IgnoreExtraProperties
-data class youtubeVideo(val videoTitle: String? = null, val videoID: String? = null) {}
+data class youtubeVideo(
+    val videoTitle: String? = null,
+    val videoID: String? = null
+) {}
+
+@IgnoreExtraProperties
+data class single_playlist(
+    val playlistTitle: String? = null,
+    val playlistCount: Int? = null,
+    val videoList : MutableList<youtubeVideo?> = mutableListOf()
+)  {}
 
 @Composable
 fun SplashScreen(navController: NavController) {
@@ -122,8 +132,14 @@ fun SplashScreen(navController: NavController) {
 
     // Enter data to the database
     LaunchedEffect(true) {
-        val database = Firebase.database
+        val database = Firebase.database.reference
+        database.child("videos")
+        database.child("playlists")
         val videos = FirebaseDatabase.getInstance().getReference("videos")
+        val playlists = FirebaseDatabase.getInstance().getReference("playlists")
+        playlists.child("add_playlist").setValue(
+            single_playlist("Create New Playlist",  0, mutableListOf())
+        )
         videos.child("video1").setValue(
             youtubeVideo(
                 "Rainy Jazz Cafe - Slow Jazz Music in Coffee Shop Ambience for Work, Study and Relaxation",

@@ -50,7 +50,7 @@ import com.example.lofiapp.ui.theme.montserrat_light
 
 
 @Composable
-fun PlaylistScreen(navController: NavController) {
+fun PlaylistScreen(navController: NavController, playlist_name: String) {
 
     val list = listOf("1", "1", "1", "1", "1", "1", "1", "1") // placeholder
     val video_id = "jfKfPfyJRdk" // video-id example
@@ -123,7 +123,7 @@ fun PlaylistScreen(navController: NavController) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Playlist of the Century",
+                        text = playlist_name,
                         fontFamily = montserrat_bold,
                         color = Color.White,
                         modifier = Modifier

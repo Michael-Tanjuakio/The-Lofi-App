@@ -92,7 +92,7 @@ import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun VideoScreen(navController: NavController, video_id: String) {
+fun VideoScreen(navController: NavController, video_title:String, video_id: String) {
 
     // placeholder variables
     val list = listOf("1", "1", "1", "1", "1", "1", "1", "1") // placeholder

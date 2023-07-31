@@ -37,6 +37,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.example.lofiapp.R
 import com.example.lofiapp.data.MenuAction
@@ -56,6 +57,7 @@ import com.google.firebase.database.ktx.getValue
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import java.util.Random
 import kotlin.random.nextInt
@@ -63,7 +65,7 @@ import kotlin.random.nextInt
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalFoundationApi::class)
 @Composable
-fun HomeScreen(navController: NavController) {
+fun HomeScreen(navController: NavController, video_title: String, video_id: String) {
 
     val refreshScope = rememberCoroutineScope()
     var refreshing by remember { mutableStateOf(false) }
@@ -83,12 +85,19 @@ fun HomeScreen(navController: NavController) {
     activity.requestedOrientation =
         ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
 
+    val playlists = FirebaseDatabase.getInstance().getReference("playlists")
     val videos = FirebaseDatabase.getInstance().getReference("videos")
     var recVideo1: youtubeVideo? by remember { mutableStateOf(youtubeVideo("", "")) }
     var recVideo2: youtubeVideo? by remember { mutableStateOf(youtubeVideo("", "")) }
     var recVideo3: youtubeVideo? by remember { mutableStateOf(youtubeVideo("", "")) }
     var recVideo4: youtubeVideo? by remember { mutableStateOf(youtubeVideo("", "")) }
     var randomVideo: youtubeVideo? by remember { mutableStateOf(youtubeVideo("", "")) }
+
+    // list of videos
+    val list_ = listOf(recVideo1, recVideo2, recVideo3, recVideo4)
+    //val list : List<youtubeVideo> = listOf()
+    val recList by remember { mutableStateOf(mutableListOf<youtubeVideo?>())}
+    val playlist_List by remember { mutableStateOf(mutableListOf<single_playlist?>())}
 
     // Read from the database
     LaunchedEffect(itemCount) {
@@ -109,7 +118,6 @@ fun HomeScreen(navController: NavController) {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
                     recVideo1 = dataSnapshot.getValue<youtubeVideo>()
                 }
-
                 override fun onCancelled(error: DatabaseError) {}
             })
         videos.child("video" + randomInts.elementAt(1).toString())
@@ -117,7 +125,6 @@ fun HomeScreen(navController: NavController) {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
                     recVideo2 = dataSnapshot.getValue<youtubeVideo>()
                 }
-
                 override fun onCancelled(error: DatabaseError) {}
             })
 
@@ -126,7 +133,6 @@ fun HomeScreen(navController: NavController) {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
                     recVideo3 = dataSnapshot.getValue<youtubeVideo>()
                 }
-
                 override fun onCancelled(error: DatabaseError) {}
             })
 
@@ -135,7 +141,6 @@ fun HomeScreen(navController: NavController) {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
                     recVideo4 = dataSnapshot.getValue<youtubeVideo>()
                 }
-
                 override fun onCancelled(error: DatabaseError) {}
             })
         videos.child("video" + (1..15).random())
@@ -143,13 +148,31 @@ fun HomeScreen(navController: NavController) {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
                     randomVideo = dataSnapshot.getValue<youtubeVideo>()
                 }
-
                 override fun onCancelled(error: DatabaseError) {}
             })
-    }
 
-    // list of videos
-    val list = listOf(recVideo1, recVideo2, recVideo3, recVideo4)
+        videos.addValueEventListener(object: ValueEventListener {
+            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                for (childSnapshot in dataSnapshot.children) {
+                    recList.add(childSnapshot.getValue<youtubeVideo?>())
+                }
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        })
+
+        playlists.addValueEventListener(object: ValueEventListener {
+            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                for (childSnapshot in dataSnapshot.children) {
+                    Log.d("add playlist", "added")
+                    playlist_List.add(childSnapshot.getValue<single_playlist?>())
+                }
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        })
+
+
+
+    }
 
     // System bar colors
     val systemUiController = rememberSystemUiController()
@@ -176,7 +199,7 @@ fun HomeScreen(navController: NavController) {
                 actions = {
                     // Create Playlist button
                     IconButton(
-                        onClick = { navController.navigate(ScreenRoutes.CreatePlaylistScreen.route) }
+                        onClick = { navController.navigate("playlist_screen/new_playlist") }
                     ) {
                         Image( // Search icon
                             painter = painterResource(id = R.drawable.playlist_add_icon),
@@ -235,19 +258,21 @@ fun HomeScreen(navController: NavController) {
                             .height(IntrinsicSize.Max)
                             .horizontalScroll(rememberScrollState())
                     ) {
-                        list.forEach { item ->
+                        Log.d("add video", "hello?")
+                        recList.forEach {
+                            Log.d("add video", "title = " + it?.videoTitle.toString())
                             Column(modifier = Modifier
                                 .padding(start = 16.dp)
                                 .clip(RoundedCornerShape(12, 12, 5, 5))
                                 .combinedClickable(
                                     // navigates to video screen
-                                    onClick = {navController.navigate("video_screen/" + item?.videoID.toString()) },
+                                    onClick = { navController.navigate("video_screen/" + it?.videoID.toString()) },
                                     onLongClick = {}
                                 )
                             ) { // Video Display
                                 // {
                                 AsyncImage( // Video thumbnail
-                                    model = "https://img.youtube.com/vi/" + item?.videoID.toString() + "/maxres2.jpg",
+                                    model = "https://img.youtube.com/vi/" + it?.videoID.toString() + "/maxres2.jpg",
                                     contentDescription = null,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
@@ -255,7 +280,7 @@ fun HomeScreen(navController: NavController) {
                                         .clip(RoundedCornerShape(12))
                                 )
                                 Text( // Video name
-                                    text = item?.videoTitle.toString(),
+                                    text = it?.videoTitle.toString(),
                                     maxLines = 4,
                                     modifier = Modifier
                                         .width(220.dp),
@@ -266,7 +291,7 @@ fun HomeScreen(navController: NavController) {
                         }
                     }
 
-                    // Playlists Text
+                    // Playlists Title Text
                     Row(modifier = Modifier.padding(top = 30.dp, start = 29.dp)) {
                         Text(
                             text = "Playlists",
@@ -287,42 +312,57 @@ fun HomeScreen(navController: NavController) {
 
                     // Playlists display (horz. scroll)
                     LazyRow(modifier = Modifier.padding(start = 13.dp, top = 6.dp)) {
-                        items(items = list, itemContent = { item ->
+                        items(items = playlist_List, itemContent = { item ->
                             Column(
                                 modifier = Modifier
                                     .padding(start = 16.dp)
                                     .clip(RoundedCornerShape(12, 12, 5, 5))
                                     .clickable {
-                                        navController.navigate(ScreenRoutes.PlaylistScreen.route)
+                                        navController.navigate("playlist_screen/" + item?.playlistTitle.toString())
                                     }
                             ) {
                                 Box() {
-                                    AsyncImage( // Video Thumbnail
-                                        model = "https://img.youtube.com/vi/" + item?.videoID.toString() + "/maxres2.jpg",
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .size(width = 220.dp, height = 134.dp)
-                                            .clip(RoundedCornerShape(12))
-                                    )
-                                    Box( // Transparent background
-                                        modifier = Modifier
-                                            .size(width = 105.dp, height = 134.dp)
-                                            .clip(RoundedCornerShape(0.dp, 15.dp, 15.dp, 0.dp))
-                                            .background(Color(0xFF404040).copy(alpha = 0.6f))
-                                            .align(alignment = Alignment.TopEnd)
-                                    ) {
-                                        Text( // Number of videos in playlist
-                                            text = "5",
+                                    if (!item?.playlistTitle.equals("Create New Playlist")) {
+                                        AsyncImage( // Video Thumbnail
+                                            model = "https://img.youtube.com/vi/" + item?.playlistTitle.toString() + "/maxres2.jpg",
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Crop,
                                             modifier = Modifier
-                                                .align(alignment = Alignment.Center),
-                                            color = Color.White,
-                                            fontFamily = montserrat_light
+                                                .size(width = 220.dp, height = 134.dp)
+                                                .clip(RoundedCornerShape(12))
                                         )
+                                    }
+                                    else {
+                                        Image(
+                                            painter = painterResource(id = R.drawable.add_new_icon),
+                                            colorFilter = ColorFilter.tint(Color.White),
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .size(width = 220.dp, height = 134.dp)
+                                                .clip(RoundedCornerShape(12))
+                                                .background(Color.Black.copy(alpha = 0.6f))
+                                        )
+                                    }
+                                    if (item?.playlistCount!! > 0) {
+                                        Box( // Transparent background
+                                            modifier = Modifier
+                                                .size(width = 105.dp, height = 134.dp)
+                                                .clip(RoundedCornerShape(0.dp, 15.dp, 15.dp, 0.dp))
+                                                .background(Color(0xFF404040).copy(alpha = 0.6f))
+                                                .align(alignment = Alignment.TopEnd)
+                                        ) {
+                                            Text( // Number of videos in playlist
+                                                text = item.playlistCount.toString(),
+                                                modifier = Modifier
+                                                    .align(alignment = Alignment.Center),
+                                                color = Color.White,
+                                                fontFamily = montserrat_light
+                                            )
+                                        }
                                     }
                                 }
                                 Text( // Playlist Name
-                                    text = "city pop playlist",
+                                    text = item?.playlistTitle.toString(),
                                     maxLines = 2,
                                     modifier = Modifier
                                         .width(220.dp)
@@ -418,13 +458,4 @@ fun HomeScreen(navController: NavController) {
 }
 
 
-@Preview(showBackground = true)
-@Composable
-fun DefaultPreview() {
-    LofiappTheme {
-//        HomeScreen(
-//            stringResource(R.string.app_name),
-//            stringResource(R.string.Search)
-//        );
-    }
-}
+

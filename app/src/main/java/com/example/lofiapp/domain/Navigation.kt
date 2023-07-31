@@ -13,7 +13,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.lofiapp.R
 import com.example.lofiapp.data.ScreenRoutes
-import com.example.lofiapp.screens.CreatePlaylistScreen
 import com.example.lofiapp.screens.EditPlaylistScreen
 import com.example.lofiapp.screens.HomeScreen
 import com.example.lofiapp.screens.SearchScreen
@@ -28,31 +27,60 @@ fun Navigation() {
         navController = navController,
         startDestination = ScreenRoutes.SplashScreen.route
     ) {
+
+        // splash screen
         composable(route = ScreenRoutes.SplashScreen.route) {
             SplashScreen(navController)
         }
-        composable(route = ScreenRoutes.HomeScreen.route) { // home screen
-            HomeScreen(navController)
+
+        // home screen
+        composable(
+            route = "home_screen/{video_title}/{video_id}",
+            arguments = listOf(
+                navArgument("video_title") { type = NavType.StringType },
+                navArgument("video_id") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val video_title = backStackEntry.arguments?.getString("video_title").toString()
+            val video_id = backStackEntry.arguments?.getString("video_id").toString()
+            HomeScreen(navController = navController, video_title = video_title, video_id = video_id)
         }
-        composable(route = ScreenRoutes.SearchScreen.route) {// search screen
+
+        // search screen
+        composable(route = ScreenRoutes.SearchScreen.route) {
             SearchScreen(navController = navController)
         }
-        composable( // video screen
-            route = "video_screen/{video_id}",
+
+        // video screen
+        composable(
+            route = "video_screen/{video_title}/{video_id}",
             arguments = listOf(
-                navArgument("video_id") {type = NavType.StringType}
-            )) { backStackEntry ->
-                val video_id = backStackEntry.arguments?.getString("video_id").toString()
-            VideoScreen(navController = navController, video_id = video_id)
+                navArgument("video_title") { type = NavType.StringType },
+                navArgument("video_id") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val video_title = backStackEntry.arguments?.getString("video_title").toString()
+            val video_id = backStackEntry.arguments?.getString("video_id").toString()
+            VideoScreen(navController = navController, video_title = video_title, video_id = video_id)
         }
-        composable(route = ScreenRoutes.PlaylistScreen.route) {// Playlist screen
-            PlaylistScreen(navController = navController)
+
+        // playlist screen
+        composable(
+            route = "playlist_screen/{playlist_name}",
+            arguments = listOf(
+                navArgument("playlist_name") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            var playlist_name = backStackEntry.arguments?.getString("playlist_name").toString()
+            if (playlist_name.equals("new_playlist")) {
+                playlist_name = "New Playlist #"
+            }
+            PlaylistScreen(navController = navController, playlist_name = playlist_name)
         }
-        composable(route = ScreenRoutes.EditPlaylistScreen.route) {// Edit playlist screen
+
+        // edit playlist screen
+        composable(route = ScreenRoutes.EditPlaylistScreen.route) {
             EditPlaylistScreen(navController = navController)
-        }
-        composable(route = ScreenRoutes.CreatePlaylistScreen.route) {// Edit playlist screen
-            CreatePlaylistScreen(navController = navController)
         }
     }
 }
