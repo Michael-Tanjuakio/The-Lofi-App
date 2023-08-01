@@ -92,7 +92,7 @@ import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun VideoScreen(navController: NavController, video_title:String, video_id: String) {
+fun VideoScreen(navController: NavController, video_id: String) {
 
     // placeholder variables
     val list = listOf("1", "1", "1", "1", "1", "1", "1", "1") // placeholder
@@ -134,10 +134,13 @@ fun VideoScreen(navController: NavController, video_title:String, video_id: Stri
     var skipNext by remember { mutableStateOf(false) }
 
     // Back handler
+    /*
     var back by remember { mutableStateOf(true) }
     BackHandler(back, onBack = { back = false }) // system back button
     if (!back)
         navController.navigateUp()
+
+     */
 
     Box(modifier = Modifier
         .fillMaxSize()
@@ -209,7 +212,7 @@ fun VideoScreen(navController: NavController, video_title:String, video_id: Stri
                 ) {
 
                     // Back button
-                    IconButton(onClick = { back = !back }) {
+                    IconButton(onClick = { navController.navigateUp() }) {
                         Image(
                             // back symbol
                             painter = painterResource(id = R.drawable.arrow_back_icon),

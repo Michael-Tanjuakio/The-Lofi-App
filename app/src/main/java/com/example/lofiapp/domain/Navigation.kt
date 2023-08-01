@@ -34,16 +34,8 @@ fun Navigation() {
         }
 
         // home screen
-        composable(
-            route = "home_screen/{video_title}/{video_id}",
-            arguments = listOf(
-                navArgument("video_title") { type = NavType.StringType },
-                navArgument("video_id") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            val video_title = backStackEntry.arguments?.getString("video_title").toString()
-            val video_id = backStackEntry.arguments?.getString("video_id").toString()
-            HomeScreen(navController = navController, video_title = video_title, video_id = video_id)
+        composable(route = ScreenRoutes.HomeScreen.route) {
+            HomeScreen(navController = navController)
         }
 
         // search screen
@@ -53,15 +45,13 @@ fun Navigation() {
 
         // video screen
         composable(
-            route = "video_screen/{video_title}/{video_id}",
+            route = "video_screen/{video_id}",
             arguments = listOf(
-                navArgument("video_title") { type = NavType.StringType },
                 navArgument("video_id") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val video_title = backStackEntry.arguments?.getString("video_title").toString()
             val video_id = backStackEntry.arguments?.getString("video_id").toString()
-            VideoScreen(navController = navController, video_title = video_title, video_id = video_id)
+            VideoScreen(navController = navController, video_id = video_id)
         }
 
         // playlist screen

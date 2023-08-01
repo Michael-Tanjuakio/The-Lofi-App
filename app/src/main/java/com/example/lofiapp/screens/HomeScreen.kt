@@ -11,10 +11,12 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -23,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,6 +36,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -65,16 +69,25 @@ import kotlin.random.nextInt
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalFoundationApi::class)
 @Composable
-fun HomeScreen(navController: NavController, video_title: String, video_id: String) {
+fun HomeScreen(navController: NavController) {
 
+    // bottom bar
+    var bottomBar_pic: String by rememberSaveable { mutableStateOf("") }
+    var bottomBar_title: String by rememberSaveable { mutableStateOf("") }
+    Log.d(
+        "video playing",
+        "initializeTop: " + bottomBar_title + " " + bottomBar_pic
+    )
+
+    // Pull to refresh components
     val refreshScope = rememberCoroutineScope()
     var refreshing by remember { mutableStateOf(false) }
-    var itemCount by remember { mutableStateOf(15) }
+    var itemCount by remember { mutableStateOf(0) }
 
     fun refresh() = refreshScope.launch {
         refreshing = true
+        itemCount += 1
         delay(1500)
-        itemCount += 5
         refreshing = false
     }
 
@@ -87,91 +100,46 @@ fun HomeScreen(navController: NavController, video_title: String, video_id: Stri
 
     val playlists = FirebaseDatabase.getInstance().getReference("playlists")
     val videos = FirebaseDatabase.getInstance().getReference("videos")
-    var recVideo1: youtubeVideo? by remember { mutableStateOf(youtubeVideo("", "")) }
-    var recVideo2: youtubeVideo? by remember { mutableStateOf(youtubeVideo("", "")) }
-    var recVideo3: youtubeVideo? by remember { mutableStateOf(youtubeVideo("", "")) }
-    var recVideo4: youtubeVideo? by remember { mutableStateOf(youtubeVideo("", "")) }
-    var randomVideo: youtubeVideo? by remember { mutableStateOf(youtubeVideo("", "")) }
 
     // list of videos
-    val list_ = listOf(recVideo1, recVideo2, recVideo3, recVideo4)
-    //val list : List<youtubeVideo> = listOf()
-    val recList by remember { mutableStateOf(mutableListOf<youtubeVideo?>())}
-    val playlist_List by remember { mutableStateOf(mutableListOf<single_playlist?>())}
+    var recList by remember { mutableStateOf(mutableListOf<youtubeVideo?>()) }
+    val playlist_List by remember { mutableStateOf(mutableListOf<single_playlist?>()) }
 
     // Read from the database
     LaunchedEffect(itemCount) {
 
-        val randomInts = generateSequence { (1..15).random() }
+        recList.clear()
+
+        var randomInts = generateSequence { (1..15).random() }
             .distinct()
-            .take(4)
+            .take(5)
             .toSet()
 
-        Log.d("RNG", "" + randomInts.elementAt(0).toString())
-        Log.d("RNG", "" + randomInts.elementAt(1).toString())
-        Log.d("RNG", "" + randomInts.elementAt(2).toString())
-        Log.d("RNG", "" + randomInts.elementAt(3).toString())
+        randomInts.forEach() {
+            videos.child("video" + it) // recommended videos
+                .addValueEventListener(object : ValueEventListener {
+                    override fun onDataChange(dataSnapshot: DataSnapshot) {
+                        recList.add(dataSnapshot.getValue<youtubeVideo?>())
+                        Log.d(
+                            "RNG",
+                            "added " + dataSnapshot.getValue<youtubeVideo?>()?.videoTitle.toString()
+                        )
+                    }
 
+                    override fun onCancelled(error: DatabaseError) {}
+                })
+        }
 
-        videos.child("video" + randomInts.elementAt(0).toString())
-            .addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    recVideo1 = dataSnapshot.getValue<youtubeVideo>()
-                }
-                override fun onCancelled(error: DatabaseError) {}
-            })
-        videos.child("video" + randomInts.elementAt(1).toString())
-            .addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    recVideo2 = dataSnapshot.getValue<youtubeVideo>()
-                }
-                override fun onCancelled(error: DatabaseError) {}
-            })
-
-        videos.child("video" + randomInts.elementAt(2).toString())
-            .addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    recVideo3 = dataSnapshot.getValue<youtubeVideo>()
-                }
-                override fun onCancelled(error: DatabaseError) {}
-            })
-
-        videos.child("video" + randomInts.elementAt(3).toString())
-            .addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    recVideo4 = dataSnapshot.getValue<youtubeVideo>()
-                }
-                override fun onCancelled(error: DatabaseError) {}
-            })
-        videos.child("video" + (1..15).random())
-            .addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    randomVideo = dataSnapshot.getValue<youtubeVideo>()
-                }
-                override fun onCancelled(error: DatabaseError) {}
-            })
-
-        videos.addValueEventListener(object: ValueEventListener {
-            override fun onDataChange(dataSnapshot: DataSnapshot) {
-                for (childSnapshot in dataSnapshot.children) {
-                    recList.add(childSnapshot.getValue<youtubeVideo?>())
-                }
-            }
-            override fun onCancelled(error: DatabaseError) {}
-        })
-
-        playlists.addValueEventListener(object: ValueEventListener {
+        playlists.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(dataSnapshot: DataSnapshot) {
                 for (childSnapshot in dataSnapshot.children) {
                     Log.d("add playlist", "added")
                     playlist_List.add(childSnapshot.getValue<single_playlist?>())
                 }
             }
+
             override fun onCancelled(error: DatabaseError) {}
         })
-
-
-
     }
 
     // System bar colors
@@ -254,23 +222,34 @@ fun HomeScreen(navController: NavController, video_title: String, video_id: Stri
                     // Recommended Videos Display (horz. scroll)
                     Row(
                         modifier = Modifier
-                            .padding(start = 13.dp, top = 6.dp)
+                            .padding(start = 13.dp, top = 0.dp)
                             .height(IntrinsicSize.Max)
                             .horizontalScroll(rememberScrollState())
                     ) {
-                        Log.d("add video", "hello?")
                         recList.forEach {
-                            Log.d("add video", "title = " + it?.videoTitle.toString())
+                            if (recList.indexOf(it) == 4) {
+                                return@forEach
+                            }
                             Column(modifier = Modifier
                                 .padding(start = 16.dp)
                                 .clip(RoundedCornerShape(12, 12, 5, 5))
                                 .combinedClickable(
                                     // navigates to video screen
-                                    onClick = { navController.navigate("video_screen/" + it?.videoID.toString()) },
+                                    onClick = {
+                                        navController
+                                            .navigate("video_screen/" + it?.videoID.toString())
+                                            .apply {
+                                                bottomBar_pic = it?.videoID.toString()
+                                                bottomBar_title = it?.videoTitle.toString()
+                                                Log.d(
+                                                    "video playing",
+                                                    "initialize: " + bottomBar_title + " " + bottomBar_pic
+                                                )
+                                            }
+                                    },
                                     onLongClick = {}
                                 )
                             ) { // Video Display
-                                // {
                                 AsyncImage( // Video thumbnail
                                     model = "https://img.youtube.com/vi/" + it?.videoID.toString() + "/maxres2.jpg",
                                     contentDescription = null,
@@ -331,8 +310,7 @@ fun HomeScreen(navController: NavController, video_title: String, video_id: Stri
                                                 .size(width = 220.dp, height = 134.dp)
                                                 .clip(RoundedCornerShape(12))
                                         )
-                                    }
-                                    else {
+                                    } else {
                                         Image(
                                             painter = painterResource(id = R.drawable.add_new_icon),
                                             colorFilter = ColorFilter.tint(Color.White),
@@ -379,7 +357,15 @@ fun HomeScreen(navController: NavController, video_title: String, video_id: Stri
                     // Random video button
                     FloatingActionButton(
                         onClick = {
-                            navController.navigate("video_screen/" + randomVideo?.videoID.toString())
+                            navController.navigate("video_screen/" + recList[4]?.videoID.toString())
+                                .apply {
+                                    bottomBar_pic = recList[4]?.videoID.toString()
+                                    bottomBar_title = recList[4]?.videoTitle.toString()
+                                    Log.d(
+                                        "video playing",
+                                        "initialize: " + bottomBar_title + " " + bottomBar_pic
+                                    )
+                                }
                         },
                         contentColor = Color(0xFF24CAAC),
                         shape = RoundedCornerShape(50.dp),
@@ -406,56 +392,82 @@ fun HomeScreen(navController: NavController, video_title: String, video_id: Stri
         },
         bottomBar = {
             // Bottom bar (Displays what video is played)
-            BottomNavigation(
-                modifier = Modifier
-                    .clickable {
-                        navController.navigate(ScreenRoutes.VideoScreen.route)
-                    },
-                backgroundColor = Color(0xFF3392EA)
-            ) {
-                Row() { // wrap in row to avoid default spacing
-                    AsyncImage( // video thumbnail
-                        model = "https://img.youtube.com/vi/" + "" + "/hqdefault.jpg",
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
+            if (!bottomBar_title.equals("")) {
+                Column() {
+                    Row(
                         modifier = Modifier
-                            .padding(start = 16.dp, top = 6.dp)
-                            .size(width = 65.dp, height = 43.dp)
-                            .clip(RoundedCornerShape(12))
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(width = 140.dp, height = 53.dp)
-                            .padding(top = 3.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Text( // video name
-                            text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
-                            fontFamily = montserrat_bold,
-                            color = Color.White,
+                        BottomNavigation(
                             modifier = Modifier
-                                .padding(start = 12.dp)
-                                .fillMaxSize(),
-                            fontSize = 10.sp
-                        )
+                                .clip(RoundedCornerShape(12))
+                                .clickable {
+                                    navController.navigate("video_screen/" + bottomBar_pic)
+                                }
+                                .fillMaxWidth(.95f),
+                            backgroundColor = Color(0xFF3392EA),
+                        ) {
+                            Log.d(
+                                "video playing",
+                                "playing: " + bottomBar_title + " " + bottomBar_pic
+                            )
+                            Row(modifier = Modifier.fillMaxHeight()) { // wrap in row to avoid default spacing
+                                Spacer(modifier = Modifier.width(16.dp))
+                                AsyncImage( // video thumbnail
+                                    model = "https://img.youtube.com/vi/" + bottomBar_pic + "/maxres2.jpg",
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(width = 65.dp, height = 43.dp)
+                                        .clip(RoundedCornerShape(12))
+                                        .align(Alignment.CenterVertically)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(
+                                    modifier = Modifier
+                                        .align(Alignment.CenterVertically)
+                                        .fillMaxWidth(.70f)
+                                        .fillMaxHeight(.95f),
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text( // video name
+                                        text = bottomBar_title,
+                                        fontFamily = montserrat_bold,
+                                        color = Color.White,
+                                        modifier = Modifier
+                                            .basicMarquee(),
+                                        fontSize = 14.sp,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                            Image( // play icon (note: make this a button)
+                                painter = painterResource(R.drawable.play_arrow_icon),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(45.dp)
+                                    .fillMaxHeight()
+                                    .align(Alignment.CenterVertically)
+                                    .clickable {
+                                        navController.navigate("video_screen/" + bottomBar_pic)
+                                    },
+                                colorFilter = ColorFilter.tint(color = Color.White)
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                        }
                     }
+                    Spacer(
+                        modifier = Modifier
+                            .height(5.dp)
+                    )
                 }
-                Image( // play icon (note: make this a button)
-                    painter = painterResource(R.drawable.play_circle_icon),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .padding(top = 4.dp, end = 16.dp)
-                        .size(45.dp)
-                        .clip(RoundedCornerShape(75, 75, 75, 75))
-                        .clickable {
-                            navController.navigate(ScreenRoutes.VideoScreen.route)
-                        },
-                    colorFilter = ColorFilter.tint(color = Color.White)
-                )
             }
         }
     )
 
 }
+
 
 
 
