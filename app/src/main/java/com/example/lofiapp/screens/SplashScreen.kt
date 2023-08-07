@@ -242,6 +242,6 @@ fun SplashScreen(navController: NavController) {
     }
     if (ticks == 3) // Launches app in 3 seconds
         LaunchedEffect(Unit) {
-            navController.navigate(ScreenRoutes.HomeScreen.route)
+            navController.navigate("home_screen")
         }
 }

@@ -4,13 +4,19 @@ import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -38,6 +44,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
@@ -75,8 +82,17 @@ import java.util.Collections
 import java.util.Collections.list
 
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EditPlaylistScreen(navController: NavController) {
+
+    // bottom bar
+    var bottomBar_pic: String by rememberSaveable { mutableStateOf("") }
+    var bottomBar_title: String by rememberSaveable { mutableStateOf("") }
+    Log.d(
+        "video playing",
+        "initializeTop: " + bottomBar_title + " " + bottomBar_pic
+    )
 
     //val list = remember { mutableStateListOf<String>("1", "2", "3") } // placeholder
     var list = remember { mutableStateOf(listOf("abc 1", "letter 2", "sing 3", "thai 4","five 5", "big 6",)) }
@@ -290,51 +306,76 @@ fun EditPlaylistScreen(navController: NavController) {
         },
         bottomBar = {
             // Bottom bar (Displays what video is played)
-            BottomNavigation(
-                modifier = Modifier
-                    .clickable {
-                        navController.navigate(ScreenRoutes.VideoScreen.route)
-                    },
-                backgroundColor = Color(0xFF3392EA)
-            ) {
-                Row() { // wrap in row to avoid default spacing
-                    AsyncImage( // video thumbnail
-                        model = fullsize_path_img,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
+            if (!bottomBar_title.equals("")) {
+                Column() {
+                    Row(
                         modifier = Modifier
-                            .padding(start = 16.dp, top = 6.dp)
-                            .size(width = 65.dp, height = 43.dp)
-                            .clip(RoundedCornerShape(12))
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(width = 140.dp, height = 53.dp)
-                            .padding(top = 3.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Text( // video name
-                            text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
-                            fontFamily = montserrat_bold,
-                            color = Color.White,
+                        BottomNavigation(
                             modifier = Modifier
-                                .padding(start = 12.dp)
-                                .fillMaxSize(),
-                            fontSize = 10.sp
-                        )
+                                .clip(RoundedCornerShape(12))
+                                .clickable {
+                                    navController.navigate("video_screen/" + bottomBar_pic)
+                                }
+                                .fillMaxWidth(.95f),
+                            backgroundColor = Color(0xFF3392EA),
+                        ) {
+                            Log.d(
+                                "video playing",
+                                "playing: " + bottomBar_title + " " + bottomBar_pic
+                            )
+                            Row(modifier = Modifier.fillMaxHeight()) { // wrap in row to avoid default spacing
+                                Spacer(modifier = Modifier.width(16.dp))
+                                AsyncImage( // video thumbnail
+                                    model = "https://img.youtube.com/vi/" + bottomBar_pic + "/maxres2.jpg",
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(width = 65.dp, height = 43.dp)
+                                        .clip(RoundedCornerShape(12))
+                                        .align(Alignment.CenterVertically)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(
+                                    modifier = Modifier
+                                        .align(Alignment.CenterVertically)
+                                        .fillMaxWidth(.70f)
+                                        .fillMaxHeight(.95f),
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text( // video name
+                                        text = bottomBar_title,
+                                        fontFamily = montserrat_bold,
+                                        color = Color.White,
+                                        modifier = Modifier
+                                            .basicMarquee(),
+                                        fontSize = 14.sp,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                            Image( // play icon (note: make this a button)
+                                painter = painterResource(R.drawable.play_arrow_icon),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(45.dp)
+                                    .fillMaxHeight()
+                                    .align(Alignment.CenterVertically)
+                                    .clickable {
+                                        navController.navigate("video_screen/" + bottomBar_pic)
+                                    },
+                                colorFilter = ColorFilter.tint(color = Color.White)
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                        }
                     }
+                    Spacer(
+                        modifier = Modifier
+                            .height(5.dp)
+                    )
                 }
-                Image( // play icon (note: make this a button)
-                    painter = painterResource(R.drawable.play_circle_icon),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .padding(top = 4.dp, end = 16.dp)
-                        .size(45.dp)
-                        .clip(RoundedCornerShape(75, 75, 75, 75))
-                        .clickable {
-                            navController.navigate(ScreenRoutes.VideoScreen.route)
-                        },
-                    colorFilter = ColorFilter.tint(color = Color.White)
-                )
             }
         }
     )

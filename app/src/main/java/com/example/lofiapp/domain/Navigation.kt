@@ -1,17 +1,12 @@
 package com.example.lofiapp.domain
 
+import android.util.Log
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.lofiapp.R
 import com.example.lofiapp.data.ScreenRoutes
 import com.example.lofiapp.screens.EditPlaylistScreen
 import com.example.lofiapp.screens.HomeScreen
@@ -23,6 +18,7 @@ import com.example.lofiapp.screens.SplashScreen
 @Composable
 fun Navigation() {
     val navController = rememberNavController()
+
     NavHost(
         navController = navController,
         startDestination = ScreenRoutes.SplashScreen.route
@@ -34,13 +30,49 @@ fun Navigation() {
         }
 
         // home screen
-        composable(route = ScreenRoutes.HomeScreen.route) {
-            HomeScreen(navController = navController)
+        composable(
+            route = "home_screen?bp={bp}?bt={bt}",
+            arguments = listOf(
+                navArgument("bp") { defaultValue = "" },
+                navArgument("bt") { defaultValue = "" }
+            )
+        ) { entry ->
+            //
+            var bp = entry.arguments?.getString("bp").toString()
+            var bt = entry.arguments?.getString("bt").toString()
+            var new_bt = entry.savedStateHandle.get<String>("new_bt").toString()
+            Log.d("new_bp", "new_bt = " + new_bt + " null = " + !new_bt.equals("null"))
+            if (!(new_bt.isNullOrEmpty()) && !new_bt.equals("null")) {
+                bp = entry.savedStateHandle.get<String>("new_bp").toString()
+                bt = entry.savedStateHandle.get<String>("new_bt").toString()
+                Log.d("new_bp", "navBack: bp = " + bp + " bt = " + new_bt)
+            }
+            HomeScreen(
+                navController = navController,
+                bp,
+                bt
+            )
         }
 
         // search screen
-        composable(route = ScreenRoutes.SearchScreen.route) {
-            SearchScreen(navController = navController)
+        composable(
+            route = "search_screen?bp={bp}?bt={bt}",
+            arguments = listOf(
+                navArgument("bp") { defaultValue = "" },
+                navArgument("bt") { defaultValue = "" }
+            )
+        ) { backStackEntry ->
+
+            Log.d(
+                "video playing",
+                "nav: " + backStackEntry.arguments?.getString("bt").toString() + " " + backStackEntry.arguments?.getString("bp").toString()
+            )
+
+            SearchScreen(
+                navController = navController,
+                backStackEntry.arguments?.getString("bp").toString(),
+                backStackEntry.arguments?.getString("bt").toString()
+            )
         }
 
         // video screen
@@ -50,8 +82,9 @@ fun Navigation() {
                 navArgument("video_id") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val video_id = backStackEntry.arguments?.getString("video_id").toString()
-            VideoScreen(navController = navController, video_id = video_id)
+            VideoScreen(
+                navController = navController,
+                video_id = backStackEntry.arguments?.getString("video_id").toString())
         }
 
         // playlist screen

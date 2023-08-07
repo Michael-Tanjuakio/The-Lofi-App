@@ -1,31 +1,51 @@
 package com.example.lofiapp.screens
 
-import androidx.compose.material.pullrefresh.PullRefreshIndicator
-import androidx.compose.material.pullrefresh.pullRefresh
-import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.util.Log
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.interaction.DragInteraction
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.*
-import androidx.compose.runtime.*
+import androidx.compose.material.BottomNavigation
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.FloatingActionButton
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
+import androidx.compose.material.Scaffold
+import androidx.compose.material.Text
+import androidx.compose.material.TopAppBar
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,20 +53,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.example.lofiapp.R
 import com.example.lofiapp.data.MenuAction
-import com.example.lofiapp.data.ScreenRoutes
-import com.example.lofiapp.ui.theme.LofiappTheme
 import com.example.lofiapp.ui.theme.flamenco_regular
 import com.example.lofiapp.ui.theme.montserrat_bold
 import com.example.lofiapp.ui.theme.montserrat_light
@@ -54,29 +68,28 @@ import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.IgnoreExtraProperties
 import com.google.firebase.database.ValueEventListener
-import com.google.firebase.database.ktx.database
 import com.google.firebase.database.ktx.getValue
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import java.util.Random
-import kotlin.random.nextInt
 
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalFoundationApi::class)
 @Composable
-fun HomeScreen(navController: NavController) {
+fun HomeScreen(navController: NavController, bp: String, bt: String) {
 
     // bottom bar
-    var bottomBar_pic: String by rememberSaveable { mutableStateOf("") }
-    var bottomBar_title: String by rememberSaveable { mutableStateOf("") }
+    var bottomBar_pic: String by remember { mutableStateOf(bp) }
+    var bottomBar_title: String by remember { mutableStateOf(bt) }
+    /*
+    LaunchedEffect(bp){
+        bottomBar_pic = bp
+        bottomBar_title = bt
+    }
+    */
     Log.d(
         "video playing",
-        "initializeTop: " + bottomBar_title + " " + bottomBar_pic
+        "home_screen: initializeTop: " + bottomBar_title + " " + bottomBar_pic
     )
 
     // Pull to refresh components
@@ -93,6 +106,7 @@ fun HomeScreen(navController: NavController) {
 
     val state = rememberPullRefreshState(refreshing, ::refresh)
 
+    // vertical orientation
     val context = LocalContext.current
     val activity = remember { context as Activity }
     activity.requestedOrientation =
@@ -178,7 +192,7 @@ fun HomeScreen(navController: NavController) {
                         )
                     }
                     // Search Button - navigates to search screen
-                    IconButton(onClick = { navController.navigate(ScreenRoutes.SearchScreen.route) }) {
+                    IconButton(onClick = { navController.navigate("search_screen?bp=" + bottomBar_pic + "?bt=" + bottomBar_title ) }) {
                         Icon( // Search icon
                             imageVector = MenuAction.Search.icon,
                             contentDescription = stringResource(MenuAction.Search.label),
@@ -233,7 +247,7 @@ fun HomeScreen(navController: NavController) {
                             Column(modifier = Modifier
                                 .padding(start = 16.dp)
                                 .clip(RoundedCornerShape(12, 12, 5, 5))
-                                .combinedClickable(
+                                .clickable(
                                     // navigates to video screen
                                     onClick = {
                                         navController
@@ -246,8 +260,7 @@ fun HomeScreen(navController: NavController) {
                                                     "initialize: " + bottomBar_title + " " + bottomBar_pic
                                                 )
                                             }
-                                    },
-                                    onLongClick = {}
+                                    }
                                 )
                             ) { // Video Display
                                 AsyncImage( // Video thumbnail

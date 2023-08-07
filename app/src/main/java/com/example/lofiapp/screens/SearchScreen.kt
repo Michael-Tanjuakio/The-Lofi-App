@@ -1,15 +1,23 @@
 package com.example.lofiapp.screens
 
+import android.app.Activity
+import android.content.pm.ActivityInfo
 import android.util.Log
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -36,6 +44,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
@@ -47,6 +56,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -71,10 +81,25 @@ import com.google.firebase.ktx.Firebase
 import java.util.Locale
 
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun SearchScreen(navController: NavController) {
+fun SearchScreen(navController: NavController, bp: String, bt: String) {
 
-    val list = remember{mutableStateListOf<youtubeVideo?>()}
+    // vertical orientation
+    val context = LocalContext.current
+    val activity = remember { context as Activity }
+    activity.requestedOrientation =
+        ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+
+    // bottom bar
+    var bottomBar_pic: String by rememberSaveable { mutableStateOf(bp) }
+    var bottomBar_title: String by rememberSaveable { mutableStateOf(bt) }
+    Log.d(
+        "video playing",
+        "Search_screen: initializeTop: " + bottomBar_title + " " + bottomBar_pic
+    )
+
+    val list = remember { mutableStateListOf<youtubeVideo?>() }
     val videos = FirebaseDatabase.getInstance().getReference("videos")
 
     fun searchByName(name: String) {
@@ -88,7 +113,9 @@ fun SearchScreen(navController: NavController) {
                         Log.d("Found video", "CLEAR LIST")
                         for (i in snapshot.children) {
                             val video = i.getValue<youtubeVideo>()
-                            if (video?.videoTitle.toString().lowercase().contains(name.lowercase())) {
+                            if (video?.videoTitle.toString().lowercase()
+                                    .contains(name.lowercase())
+                            ) {
                                 list.add(video)
                                 Log.d("Found video", "" + video?.videoTitle.toString())
                             }
@@ -96,9 +123,11 @@ fun SearchScreen(navController: NavController) {
                     }
                 }
             }
+
             override fun onCancelled(error: DatabaseError) {}
         })
     }
+
     var text by remember { mutableStateOf("") }
 
     Scaffold(
@@ -107,7 +136,19 @@ fun SearchScreen(navController: NavController) {
             // Top App Bar Components (title padding is off)
             Row {
                 Box(modifier = Modifier.padding(start = 5.dp, top = 3.dp)) { // Back button
-                    IconButton(onClick = { navController.navigateUp() }) {
+                    IconButton(onClick = {
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("new_bp", bottomBar_pic)
+                        Log.d("new_bp", "set new_bp: " + bottomBar_pic)
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("new_bt", bottomBar_title)
+                        Log.d("new_bp", "set new_bt: " + bottomBar_title)
+                        navController
+                            .popBackStack()
+
+                    }) {
                         Image(
                             // back symbol
                             painter = painterResource(id = R.drawable.arrow_back_icon),
@@ -185,7 +226,7 @@ fun SearchScreen(navController: NavController) {
             // Searched Videos Display (vertical. scroll)
             LazyColumn(modifier = Modifier.padding(top = 20.dp, bottom = 50.dp)) {
                 items(items = list, itemContent = { item ->
-                    Log.d("Found video", "Show list" )
+                    Log.d("Found video", "Show list")
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -194,9 +235,21 @@ fun SearchScreen(navController: NavController) {
                         Box(modifier = Modifier
                             .clip(RoundedCornerShape(12, 12, 5, 5))
                             .align(CenterHorizontally)
-                            .clickable {
-                                navController.navigate("video_screen/" + item?.videoID.toString())
-                            }
+                            .clickable(
+                                // navigates to video screen
+                                onClick = {
+                                    navController
+                                        .navigate("video_screen/" + item?.videoID.toString())
+                                        .apply {
+                                            bottomBar_pic = item?.videoID.toString()
+                                            bottomBar_title = item?.videoTitle.toString()
+                                            Log.d(
+                                                "video playing",
+                                                "initialize: " + bottomBar_title + " " + bottomBar_pic
+                                            )
+                                        }
+                                }
+                            )
                         ) {
                             Column() {
                                 AsyncImage( // Video thumbnail
@@ -225,51 +278,76 @@ fun SearchScreen(navController: NavController) {
         },
         bottomBar = {
             // Bottom bar (Displays what video is played)
-            BottomNavigation(
-                modifier = Modifier
-                    .clickable {
-                        navController.navigate(ScreenRoutes.VideoScreen.route)
-                    },
-                backgroundColor = Color(0xFF3392EA)
-            ) {
-                Row() { // wrap in row to avoid default spacing
-                    AsyncImage( // video thumbnail
-                        model = null,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
+            if (!bottomBar_title.equals("")) {
+                Column() {
+                    Row(
                         modifier = Modifier
-                            .padding(start = 16.dp, top = 6.dp)
-                            .size(width = 65.dp, height = 43.dp)
-                            .clip(RoundedCornerShape(12))
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(width = 140.dp, height = 53.dp)
-                            .padding(top = 3.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Text( // video name
-                            text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
-                            fontFamily = montserrat_bold,
-                            color = Color.White,
+                        BottomNavigation(
                             modifier = Modifier
-                                .padding(start = 12.dp)
-                                .fillMaxSize(),
-                            fontSize = 10.sp
-                        )
+                                .clip(RoundedCornerShape(12))
+                                .clickable {
+                                    navController.navigate("video_screen/" + bottomBar_pic)
+                                }
+                                .fillMaxWidth(.95f),
+                            backgroundColor = Color(0xFF3392EA),
+                        ) {
+                            Log.d(
+                                "video playing",
+                                "Search_screen: playing: " + bottomBar_title + " " + bottomBar_pic
+                            )
+                            Row(modifier = Modifier.fillMaxHeight()) { // wrap in row to avoid default spacing
+                                Spacer(modifier = Modifier.width(16.dp))
+                                AsyncImage( // video thumbnail
+                                    model = "https://img.youtube.com/vi/" + bottomBar_pic + "/maxres2.jpg",
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(width = 65.dp, height = 43.dp)
+                                        .clip(RoundedCornerShape(12))
+                                        .align(Alignment.CenterVertically)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(
+                                    modifier = Modifier
+                                        .align(Alignment.CenterVertically)
+                                        .fillMaxWidth(.70f)
+                                        .fillMaxHeight(.95f),
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text( // video name
+                                        text = bottomBar_title,
+                                        fontFamily = montserrat_bold,
+                                        color = Color.White,
+                                        modifier = Modifier
+                                            .basicMarquee(),
+                                        fontSize = 14.sp,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                            Image( // play icon (note: make this a button)
+                                painter = painterResource(R.drawable.play_arrow_icon),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(45.dp)
+                                    .fillMaxHeight()
+                                    .align(Alignment.CenterVertically)
+                                    .clickable {
+                                        navController.navigate("video_screen/" + bottomBar_pic)
+                                    },
+                                colorFilter = ColorFilter.tint(color = Color.White)
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                        }
                     }
+                    Spacer(
+                        modifier = Modifier
+                            .height(5.dp)
+                    )
                 }
-                Image( // play icon (note: make this a button)
-                    painter = painterResource(R.drawable.play_circle_icon),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .padding(top = 4.dp, end = 16.dp)
-                        .size(45.dp)
-                        .clip(RoundedCornerShape(75, 75, 75, 75))
-                        .clickable {
-                            navController.navigate(ScreenRoutes.VideoScreen.route)
-                        },
-                    colorFilter = ColorFilter.tint(color = Color.White)
-                )
             }
         }
     )
