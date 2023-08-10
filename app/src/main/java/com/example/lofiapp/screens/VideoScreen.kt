@@ -92,7 +92,7 @@ import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun VideoScreen(navController: NavController, video_id: String) {
+fun VideoScreen(navController: NavController, bottomBar_pic: String, bottomBar_title: String) {
 
     // placeholder variables
     val list = listOf("1", "1", "1", "1", "1", "1", "1", "1") // placeholder
@@ -108,7 +108,7 @@ fun VideoScreen(navController: NavController, video_id: String) {
     )
     //val video_id = "jfKfPfyJRdk" // video-id example
     val fullsize_path_img =
-        "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
+        "https://img.youtube.com/vi/$bottomBar_pic/maxresdefault.jpg" // thumbnail link example
     var showControls by remember { mutableStateOf(true) }
     var showQueueH by remember { mutableStateOf(false) }
     var showQueueV by remember { mutableStateOf(false) }
@@ -133,14 +133,25 @@ fun VideoScreen(navController: NavController, video_id: String) {
     // Playlist boolean
     var skipNext by remember { mutableStateOf(false) }
 
-    // Back handler
-    /*
-    var back by remember { mutableStateOf(true) }
-    BackHandler(back, onBack = { back = false }) // system back button
-    if (!back)
-        navController.navigateUp()
+    // Navigate back function
+    fun navBack() {
+        // Save data when navigating back
+        navController.previousBackStackEntry
+            ?.savedStateHandle
+            ?.set("new_bottomBar_pic", bottomBar_pic)
+        navController.previousBackStackEntry
+            ?.savedStateHandle
+            ?.set("new_bottomBar_title", bottomBar_title)
 
-     */
+        // navigate back
+        navController
+            .popBackStack()
+    }
+
+    // System Back handler
+    BackHandler(true, onBack = {
+        navBack()
+    })
 
     Box(modifier = Modifier
         .fillMaxSize()
@@ -172,14 +183,14 @@ fun VideoScreen(navController: NavController, video_id: String) {
                     ) {
 
                         skipNext = YoutubeScreen(
-                            video_id,
+                            bottomBar_pic,
                             Modifier
                                 .aspectRatio(16 / 9f)
                         )
 
                         if (skipNext)
                             LaunchedEffect(skipNext) {// avoids crash
-                                navController.navigate("VideoScreen/JStAYvbeSHc")
+                                navController.navigate("VideoScreen/JStAYvbeSHc") // fix this later
                             }
 
 
@@ -212,7 +223,9 @@ fun VideoScreen(navController: NavController, video_id: String) {
                 ) {
 
                     // Back button
-                    IconButton(onClick = { navController.navigateUp() }) {
+                    IconButton(onClick = {
+                        navBack()
+                    }) {
                         Image(
                             // back symbol
                             painter = painterResource(id = R.drawable.arrow_back_icon),

@@ -3,6 +3,7 @@ package com.example.lofiapp.screens
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -78,45 +79,67 @@ import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ktx.database
 import com.google.firebase.database.ktx.getValue
 import com.google.firebase.ktx.Firebase
+import java.net.URLDecoder
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.util.Locale
 
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun SearchScreen(navController: NavController, bp: String, bt: String) {
+fun SearchScreen(navController: NavController, bottomBar_pic: String, bottomBar_title: String) {
 
-    // vertical orientation
+    // Search textbox editable text
+    var text by remember { mutableStateOf("") }
+
+    // Locked Vertical Orientation
     val context = LocalContext.current
     val activity = remember { context as Activity }
     activity.requestedOrientation =
         ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
 
-    // bottom bar
-    var bottomBar_pic: String by rememberSaveable { mutableStateOf(bp) }
-    var bottomBar_title: String by rememberSaveable { mutableStateOf(bt) }
-    Log.d(
-        "video playing",
-        "Search_screen: initializeTop: " + bottomBar_title + " " + bottomBar_pic
-    )
+    // Navigate back function
+    fun navBack() {
+        // Save data when navigating back
+        navController.previousBackStackEntry
+            ?.savedStateHandle
+            ?.set("new_bottomBar_pic", bottomBar_pic)
+        navController.previousBackStackEntry
+            ?.savedStateHandle
+            ?.set("new_bottomBar_title", bottomBar_title)
 
+        // navigate back
+        navController
+            .popBackStack()
+    }
+
+    // System Back handler
+    BackHandler(true, onBack = {
+        navBack()
+    })
+
+    // List of videos found in search
     val list = remember { mutableStateListOf<youtubeVideo?>() }
     val videos = FirebaseDatabase.getInstance().getReference("videos")
 
+    // Search function
     fun searchByName(name: String) {
-        videos.addValueEventListener(object : ValueEventListener {
+        videos.addValueEventListener(object :
+            ValueEventListener { // goes through the list of videos in database
             override fun onDataChange(snapshot: DataSnapshot) {
                 if (name.isEmpty())
-                    list.clear()
+                    list.clear() // clear list if there are no characters
                 else {
                     if (snapshot.exists()) {
                         list.clear()
                         Log.d("Found video", "CLEAR LIST")
-                        for (i in snapshot.children) {
-                            val video = i.getValue<youtubeVideo>()
-                            if (video?.videoTitle.toString().lowercase()
-                                    .contains(name.lowercase())
+                        for (i in snapshot.children) { // goes through all videos in database
+                            val video = i.getValue<youtubeVideo>() // searched video
+                            if (video?.videoTitle.toString()
+                                    .lowercase() // if video title matches in letters add video
+                                    .contains(name.lowercase()) // lowercases all letters to make match more accessible
                             ) {
-                                list.add(video)
+                                list.add(video) // add video to searched videos list
                                 Log.d("Found video", "" + video?.videoTitle.toString())
                             }
                         }
@@ -128,8 +151,7 @@ fun SearchScreen(navController: NavController, bp: String, bt: String) {
         })
     }
 
-    var text by remember { mutableStateOf("") }
-
+    // Scaffold (Top bar, Content, Bottom Bar)
     Scaffold(
         topBar = {
             TopAppBar(title = { }, backgroundColor = Color(0xFF24CAAC))
@@ -137,17 +159,7 @@ fun SearchScreen(navController: NavController, bp: String, bt: String) {
             Row {
                 Box(modifier = Modifier.padding(start = 5.dp, top = 3.dp)) { // Back button
                     IconButton(onClick = {
-                        navController.previousBackStackEntry
-                            ?.savedStateHandle
-                            ?.set("new_bp", bottomBar_pic)
-                        Log.d("new_bp", "set new_bp: " + bottomBar_pic)
-                        navController.previousBackStackEntry
-                            ?.savedStateHandle
-                            ?.set("new_bt", bottomBar_title)
-                        Log.d("new_bp", "set new_bt: " + bottomBar_title)
-                        navController
-                            .popBackStack()
-
+                        navBack()
                     }) {
                         Image(
                             // back symbol
@@ -160,28 +172,32 @@ fun SearchScreen(navController: NavController, bp: String, bt: String) {
                     }
                 }
                 Canvas( // Search box background
-                    modifier = Modifier.offset(x = (5).dp, y = (7).dp),
-                    onDraw = {
-                        drawRoundRect(
-                            // Search box shape
-                            color = Color(0xFFECECEC),
-                            size = Size(width = 245.dp.toPx(), height = 40.dp.toPx()),
-                            cornerRadius = CornerRadius(x = 36.dp.toPx(), 36.dp.toPx()),
-                        )
-                    }
-                )
+                    modifier = Modifier
+                        .offset(x = (5).dp, y = (7).dp)
+                        .fillMaxWidth(.9f)
+                ) {
+                    drawRoundRect(
+                        // Search box shape
+                        color = Color(0xFFECECEC),
+                        size = Size(width = size.width, height = 40.dp.toPx()),
+                        cornerRadius = CornerRadius(x = 36.dp.toPx(), 36.dp.toPx()),
+                    )
+                }
+            }
+            Row() {
+                Spacer(modifier = Modifier.width(55.dp))
 
                 val customTextSelectionColors = TextSelectionColors( // selection text color
                     handleColor = Color(0xFF24CAAC),
                     backgroundColor = Color(0xFF24CAAC).copy(alpha = 0.4f)
                 )
+                // Textfield
                 CompositionLocalProvider(LocalTextSelectionColors provides customTextSelectionColors) {
                     BasicTextField(
-                        // textfield
                         value = text,
                         onValueChange = { newText ->
                             text = newText
-                            searchByName(text)
+                            searchByName(text) // call search function
                         },
                         textStyle = TextStyle(
                             fontSize = 15.sp,
@@ -193,7 +209,8 @@ fun SearchScreen(navController: NavController, bp: String, bt: String) {
                         cursorBrush = SolidColor(Color.Black),
                         modifier = Modifier
                             .padding(top = 14.dp, start = 20.dp)
-                            .size(width = 225.dp, height = 30.dp),
+                            .fillMaxWidth(.88f)
+                            .height(30.dp),
                         decorationBox = { innerTextField ->
                             Row {
                                 if (text.isEmpty()) { // if there is no text
@@ -238,16 +255,15 @@ fun SearchScreen(navController: NavController, bp: String, bt: String) {
                             .clickable(
                                 // navigates to video screen
                                 onClick = {
-                                    navController
-                                        .navigate("video_screen/" + item?.videoID.toString())
-                                        .apply {
-                                            bottomBar_pic = item?.videoID.toString()
-                                            bottomBar_title = item?.videoTitle.toString()
-                                            Log.d(
-                                                "video playing",
-                                                "initialize: " + bottomBar_title + " " + bottomBar_pic
-                                            )
-                                        }
+                                    navController.navigate(  // navigates to video screen
+                                        "video_screen/"
+                                                + item?.videoID.toString()
+                                                + "/"
+                                                + URLEncoder.encode( // encode to pass "&" character
+                                            item?.videoTitle.toString(),
+                                            StandardCharsets.UTF_8.toString()
+                                        )
+                                    )
                                 }
                             )
                         ) {
@@ -289,7 +305,14 @@ fun SearchScreen(navController: NavController, bp: String, bt: String) {
                             modifier = Modifier
                                 .clip(RoundedCornerShape(12))
                                 .clickable {
-                                    navController.navigate("video_screen/" + bottomBar_pic)
+                                    navController.navigate(
+                                        "video_screen/"
+                                                + bottomBar_pic + "/"
+                                                + URLEncoder.encode( // encode to pass "&" character
+                                            bottomBar_title,
+                                            StandardCharsets.UTF_8.toString()
+                                        )
+                                    )
                                 }
                                 .fillMaxWidth(.95f),
                             backgroundColor = Color(0xFF3392EA),
@@ -313,12 +336,15 @@ fun SearchScreen(navController: NavController, bp: String, bt: String) {
                                 Column(
                                     modifier = Modifier
                                         .align(Alignment.CenterVertically)
-                                        .fillMaxWidth(.70f)
+                                        .fillMaxWidth(.90f)
                                         .fillMaxHeight(.95f),
                                     verticalArrangement = Arrangement.Center
                                 ) {
-                                    Text( // video name
-                                        text = bottomBar_title,
+                                    Text( // video name (decodes title)
+                                        text = URLDecoder.decode(
+                                            bottomBar_title,
+                                            StandardCharsets.UTF_8.toString()
+                                        ),
                                         fontFamily = montserrat_bold,
                                         color = Color.White,
                                         modifier = Modifier
@@ -328,19 +354,6 @@ fun SearchScreen(navController: NavController, bp: String, bt: String) {
                                     )
                                 }
                             }
-                            Image( // play icon (note: make this a button)
-                                painter = painterResource(R.drawable.play_arrow_icon),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(45.dp)
-                                    .fillMaxHeight()
-                                    .align(Alignment.CenterVertically)
-                                    .clickable {
-                                        navController.navigate("video_screen/" + bottomBar_pic)
-                                    },
-                                colorFilter = ColorFilter.tint(color = Color.White)
-                            )
-                            Spacer(modifier = Modifier.width(2.dp))
                         }
                     }
                     Spacer(

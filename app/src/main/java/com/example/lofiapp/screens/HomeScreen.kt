@@ -3,6 +3,7 @@ package com.example.lofiapp.screens
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -72,82 +73,76 @@ import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ktx.getValue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.net.URLDecoder
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
-
+// bottom bar navigation functionality, fixed search bar sizing
 @OptIn(ExperimentalMaterialApi::class, ExperimentalFoundationApi::class)
 @Composable
-fun HomeScreen(navController: NavController, bp: String, bt: String) {
+fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_title: String) {
 
-    // bottom bar
-    var bottomBar_pic: String by remember { mutableStateOf(bp) }
-    var bottomBar_title: String by remember { mutableStateOf(bt) }
-    /*
-    LaunchedEffect(bp){
-        bottomBar_pic = bp
-        bottomBar_title = bt
-    }
-    */
-    Log.d(
-        "video playing",
-        "home_screen: initializeTop: " + bottomBar_title + " " + bottomBar_pic
-    )
+    // System Back handler (Go nowhere)
+    BackHandler(true, onBack = { })
 
     // Pull to refresh components
     val refreshScope = rememberCoroutineScope()
     var refreshing by remember { mutableStateOf(false) }
     var itemCount by remember { mutableStateOf(0) }
 
+    // Refresh function
     fun refresh() = refreshScope.launch {
         refreshing = true
-        itemCount += 1
+        itemCount += 1 // randomizes videos
         delay(1500)
         refreshing = false
     }
 
+    // Refresh state
     val state = rememberPullRefreshState(refreshing, ::refresh)
 
-    // vertical orientation
+    // Locked Vertical Orientation
     val context = LocalContext.current
     val activity = remember { context as Activity }
     activity.requestedOrientation =
         ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
 
+    // Retrieve list from database
     val playlists = FirebaseDatabase.getInstance().getReference("playlists")
     val videos = FirebaseDatabase.getInstance().getReference("videos")
 
-    // list of videos
+    // App list display
     var recList by remember { mutableStateOf(mutableListOf<youtubeVideo?>()) }
     val playlist_List by remember { mutableStateOf(mutableListOf<single_playlist?>()) }
 
     // Read from the database
     LaunchedEffect(itemCount) {
 
+        // Clear recommended videos list
         recList.clear()
 
+        // Generate 5 distinct random numbers
         var randomInts = generateSequence { (1..15).random() }
             .distinct()
             .take(5)
             .toSet()
 
+        // Retrieve videos of "video + random #" from database
         randomInts.forEach() {
-            videos.child("video" + it) // recommended videos
+            videos.child("video" + it)
                 .addValueEventListener(object : ValueEventListener {
                     override fun onDataChange(dataSnapshot: DataSnapshot) {
                         recList.add(dataSnapshot.getValue<youtubeVideo?>())
-                        Log.d(
-                            "RNG",
-                            "added " + dataSnapshot.getValue<youtubeVideo?>()?.videoTitle.toString()
-                        )
                     }
 
                     override fun onCancelled(error: DatabaseError) {}
                 })
         }
 
+        // Retrieve playlists list from database (FIX LATER)
         playlists.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(dataSnapshot: DataSnapshot) {
                 for (childSnapshot in dataSnapshot.children) {
-                    Log.d("add playlist", "added")
                     playlist_List.add(childSnapshot.getValue<single_playlist?>())
                 }
             }
@@ -170,6 +165,7 @@ fun HomeScreen(navController: NavController, bp: String, bt: String) {
             // Top Bar Composable
             TopAppBar(
                 title = {
+                    // Title Text
                     Text(
                         text = "lofiapp",
                         color = Color.White,
@@ -181,9 +177,22 @@ fun HomeScreen(navController: NavController, bp: String, bt: String) {
                 actions = {
                     // Create Playlist button
                     IconButton(
-                        onClick = { navController.navigate("playlist_screen/new_playlist") }
+                        onClick = {
+                            navController.navigate(
+                                "playlist_screen" +
+                                        "/none" +
+                                        "?new_playlist=" + true +
+                                        "&bottomBar_pic=" + bottomBar_pic +
+                                        "&bottomBar_title=" +
+                                        URLEncoder.encode(
+                                            bottomBar_title,
+                                            StandardCharsets.UTF_8.toString()
+                                        )
+                            )
+                        }
                     ) {
-                        Image( // Search icon
+                        // Search Icon
+                        Image(
                             painter = painterResource(id = R.drawable.playlist_add_icon),
                             contentDescription = null,
                             colorFilter = ColorFilter.tint(color = Color.White),
@@ -192,7 +201,19 @@ fun HomeScreen(navController: NavController, bp: String, bt: String) {
                         )
                     }
                     // Search Button - navigates to search screen
-                    IconButton(onClick = { navController.navigate("search_screen?bp=" + bottomBar_pic + "?bt=" + bottomBar_title ) }) {
+                    IconButton(onClick = {
+                        Log.d("new_bp", "passing: " + bottomBar_pic + " " + bottomBar_title)
+                        navController.navigate(
+                            "search_screen" +
+                                    "?bottomBar_pic=$bottomBar_pic" +
+                                    "&bottomBar_title=${
+                                        URLEncoder.encode(
+                                            bottomBar_title,
+                                            StandardCharsets.UTF_8.toString()
+                                        )
+                                    }"
+                        ) // encode to pass "&" character
+                    }) {
                         Icon( // Search icon
                             imageVector = MenuAction.Search.icon,
                             contentDescription = stringResource(MenuAction.Search.label),
@@ -240,7 +261,8 @@ fun HomeScreen(navController: NavController, bp: String, bt: String) {
                             .height(IntrinsicSize.Max)
                             .horizontalScroll(rememberScrollState())
                     ) {
-                        recList.forEach {
+                        recList.forEach {// goes through each recommended video in recList
+                            // Don't display random video
                             if (recList.indexOf(it) == 4) {
                                 return@forEach
                             }
@@ -248,18 +270,16 @@ fun HomeScreen(navController: NavController, bp: String, bt: String) {
                                 .padding(start = 16.dp)
                                 .clip(RoundedCornerShape(12, 12, 5, 5))
                                 .clickable(
-                                    // navigates to video screen
                                     onClick = {
-                                        navController
-                                            .navigate("video_screen/" + it?.videoID.toString())
-                                            .apply {
-                                                bottomBar_pic = it?.videoID.toString()
-                                                bottomBar_title = it?.videoTitle.toString()
-                                                Log.d(
-                                                    "video playing",
-                                                    "initialize: " + bottomBar_title + " " + bottomBar_pic
-                                                )
-                                            }
+                                        navController.navigate(  // navigates to video screen
+                                            "video_screen/"
+                                                    + it?.videoID.toString()
+                                                    + "/"
+                                                    + URLEncoder.encode( // encode to pass "&" character
+                                                it?.videoTitle.toString(),
+                                                StandardCharsets.UTF_8.toString()
+                                            )
+                                        )
                                     }
                                 )
                             ) { // Video Display
@@ -370,15 +390,15 @@ fun HomeScreen(navController: NavController, bp: String, bt: String) {
                     // Random video button
                     FloatingActionButton(
                         onClick = {
-                            navController.navigate("video_screen/" + recList[4]?.videoID.toString())
-                                .apply {
-                                    bottomBar_pic = recList[4]?.videoID.toString()
-                                    bottomBar_title = recList[4]?.videoTitle.toString()
-                                    Log.d(
-                                        "video playing",
-                                        "initialize: " + bottomBar_title + " " + bottomBar_pic
-                                    )
-                                }
+                            navController.navigate(
+                                "video_screen/"
+                                        + recList[4]?.videoID.toString()
+                                        + "/"
+                                        + URLEncoder.encode( // encode to pass "&" character
+                                    recList[4]?.videoTitle.toString(),
+                                    StandardCharsets.UTF_8.toString()
+                                )
+                            )
                         },
                         contentColor = Color(0xFF24CAAC),
                         shape = RoundedCornerShape(50.dp),
@@ -416,7 +436,14 @@ fun HomeScreen(navController: NavController, bp: String, bt: String) {
                             modifier = Modifier
                                 .clip(RoundedCornerShape(12))
                                 .clickable {
-                                    navController.navigate("video_screen/" + bottomBar_pic)
+                                    navController.navigate(
+                                        "video_screen/"
+                                                + bottomBar_pic + "/"
+                                                + URLEncoder.encode( // encode to pass "&" and "/" characters
+                                            bottomBar_title,
+                                            StandardCharsets.UTF_8.toString()
+                                        )
+                                    )
                                 }
                                 .fillMaxWidth(.95f),
                             backgroundColor = Color(0xFF3392EA),
@@ -440,12 +467,15 @@ fun HomeScreen(navController: NavController, bp: String, bt: String) {
                                 Column(
                                     modifier = Modifier
                                         .align(Alignment.CenterVertically)
-                                        .fillMaxWidth(.70f)
+                                        .fillMaxWidth(.90f)
                                         .fillMaxHeight(.95f),
                                     verticalArrangement = Arrangement.Center
                                 ) {
-                                    Text( // video name
-                                        text = bottomBar_title,
+                                    Text( // video name (decodes title)
+                                        text = URLDecoder.decode(
+                                            bottomBar_title,
+                                            StandardCharsets.UTF_8.toString()
+                                        ),
                                         fontFamily = montserrat_bold,
                                         color = Color.White,
                                         modifier = Modifier
@@ -455,19 +485,6 @@ fun HomeScreen(navController: NavController, bp: String, bt: String) {
                                     )
                                 }
                             }
-                            Image( // play icon (note: make this a button)
-                                painter = painterResource(R.drawable.play_arrow_icon),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(45.dp)
-                                    .fillMaxHeight()
-                                    .align(Alignment.CenterVertically)
-                                    .clickable {
-                                        navController.navigate("video_screen/" + bottomBar_pic)
-                                    },
-                                colorFilter = ColorFilter.tint(color = Color.White)
-                            )
-                            Spacer(modifier = Modifier.width(2.dp))
                         }
                     }
                     Spacer(
@@ -478,7 +495,6 @@ fun HomeScreen(navController: NavController, bp: String, bt: String) {
             }
         }
     )
-
 }
 
 

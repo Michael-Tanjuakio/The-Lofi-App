@@ -2,6 +2,11 @@ package com.example.lofiapp.domain
 
 import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -14,6 +19,12 @@ import com.example.lofiapp.screens.SearchScreen
 import com.example.lofiapp.screens.VideoScreen
 import com.example.lofiapp.screens.PlaylistScreen
 import com.example.lofiapp.screens.SplashScreen
+import com.example.lofiapp.screens.single_playlist
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.ktx.getValue
 
 @Composable
 fun Navigation() {
@@ -31,79 +42,210 @@ fun Navigation() {
 
         // home screen
         composable(
-            route = "home_screen?bp={bp}?bt={bt}",
+            route = "home_screen?bottomBar_pic={bottomBar_pic}?bottomBar_title={bottomBar_title}",
             arguments = listOf(
-                navArgument("bp") { defaultValue = "" },
-                navArgument("bt") { defaultValue = "" }
+                navArgument("bottomBar_pic") { defaultValue = "" },
+                navArgument("bottomBar_title") { defaultValue = "" }
             )
         ) { entry ->
-            //
-            var bp = entry.arguments?.getString("bp").toString()
-            var bt = entry.arguments?.getString("bt").toString()
-            var new_bt = entry.savedStateHandle.get<String>("new_bt").toString()
-            Log.d("new_bp", "new_bt = " + new_bt + " null = " + !new_bt.equals("null"))
-            if (!(new_bt.isNullOrEmpty()) && !new_bt.equals("null")) {
-                bp = entry.savedStateHandle.get<String>("new_bp").toString()
-                bt = entry.savedStateHandle.get<String>("new_bt").toString()
-                Log.d("new_bp", "navBack: bp = " + bp + " bt = " + new_bt)
+            // Initialize variables (no video playing)
+            var bottomBar_pic = entry.arguments?.getString("bottomBar_pic").toString()
+            var bottomBar_title = entry.arguments?.getString("bottomBar_title").toString()
+
+            // Navigating Back with data from a screen
+            if (!(entry.savedStateHandle.get<String>("new_bottomBar_title")
+                    .toString()).equals("null")
+            ) {
+                bottomBar_pic = entry.savedStateHandle.get<String>("new_bottomBar_pic").toString()
+                bottomBar_title =
+                    entry.savedStateHandle.get<String>("new_bottomBar_title").toString()
+                Log.d(
+                    "new_bp",
+                    "HomeScreen: navBack: bottomBar_pic = " + bottomBar_pic + " bt = " + bottomBar_title
+                )
             }
+
+            // Display screen
             HomeScreen(
                 navController = navController,
-                bp,
-                bt
+                bottomBar_pic,
+                bottomBar_title
             )
         }
 
         // search screen
         composable(
-            route = "search_screen?bp={bp}?bt={bt}",
+            route = "search_screen?bottomBar_pic={bottomBar_pic}&bottomBar_title={bottomBar_title}",
             arguments = listOf(
-                navArgument("bp") { defaultValue = "" },
-                navArgument("bt") { defaultValue = "" }
+                navArgument("bottomBar_pic") { defaultValue = "" },
+                navArgument("bottomBar_title") { defaultValue = "" }
             )
-        ) { backStackEntry ->
+        ) { entry ->
 
+            // No Video playing / Navforward
+            var bottomBar_pic = entry.arguments?.getString("bottomBar_pic").toString()
+            var bottomBar_title = entry.arguments?.getString("bottomBar_title").toString()
             Log.d(
-                "video playing",
-                "nav: " + backStackEntry.arguments?.getString("bt").toString() + " " + backStackEntry.arguments?.getString("bp").toString()
+                "new_bp",
+                "SearchScreen: navNext: bottomBar_pic = " + entry.arguments?.getString("bottomBar_pic")
+                    .toString() + " bt = " + bottomBar_title
             )
 
+            // Navigating Back with data from a screen
+            if (!(entry.savedStateHandle.get<String>("new_bottomBar_title")
+                    .toString()).equals("null")
+            ) {
+                bottomBar_pic = entry.savedStateHandle.get<String>("new_bottomBar_pic").toString()
+                bottomBar_title =
+                    entry.savedStateHandle.get<String>("new_bottomBar_title").toString()
+                Log.d(
+                    "new_bp",
+                    "SearchScreen: navBack: bottomBar_pic = " + bottomBar_pic + " bottomBar_title = " + bottomBar_title
+                )
+            }
+
+            // Display search screen
             SearchScreen(
                 navController = navController,
-                backStackEntry.arguments?.getString("bp").toString(),
-                backStackEntry.arguments?.getString("bt").toString()
+                bottomBar_pic,
+                bottomBar_title
             )
         }
 
         // video screen
         composable(
-            route = "video_screen/{video_id}",
+            route = "video_screen/{bottomBar_pic}/{bottomBar_title}",
             arguments = listOf(
-                navArgument("video_id") { type = NavType.StringType }
+                navArgument("bottomBar_pic") { defaultValue = "" },
+                navArgument("bottomBar_title") { defaultValue = "" }
             )
-        ) { backStackEntry ->
+        ) { entry ->
+
+            // Initialize variables (no video playing)
+            var bottomBar_pic = entry.arguments?.getString("bottomBar_pic").toString()
+            var bottomBar_title = entry.arguments?.getString("bottomBar_title").toString()
+
+            // Navigating Back with data from a screen
+            if (!(entry.savedStateHandle.get<String>("new_bottomBar_title")
+                    .toString()).equals("null")
+            ) {
+                bottomBar_pic = entry.savedStateHandle.get<String>("new_bottomBar_pic").toString()
+                bottomBar_title =
+                    entry.savedStateHandle.get<String>("new_bottomBar_title").toString()
+                Log.d(
+                    "new_bp",
+                    "navBack: bottomBar_pic = " + bottomBar_pic + " bt = " + bottomBar_title
+                )
+            }
+
+            // Display video screen
             VideoScreen(
                 navController = navController,
-                video_id = backStackEntry.arguments?.getString("video_id").toString())
+                bottomBar_pic,
+                bottomBar_title
+            )
         }
 
         // playlist screen
         composable(
-            route = "playlist_screen/{playlist_name}",
+            route = "playlist_screen/{playlist_name}?new_playlist={new_playlist}&bottomBar_pic={bottomBar_pic}&bottomBar_title={bottomBar_title}",
             arguments = listOf(
-                navArgument("playlist_name") { type = NavType.StringType }
+                navArgument("bottomBar_pic") { defaultValue = "" },
+                navArgument("bottomBar_title") { defaultValue = "" },
+                navArgument("playlist_name") { type = NavType.StringType },
+                navArgument("new_playlist") { type = NavType.BoolType }
             )
-        ) { backStackEntry ->
-            var playlist_name = backStackEntry.arguments?.getString("playlist_name").toString()
-            if (playlist_name.equals("new_playlist")) {
-                playlist_name = "New Playlist #"
+        ) { entry ->
+
+            // No Video playing / Navforward
+            var bottomBar_pic = entry.arguments?.getString("bottomBar_pic").toString()
+            var bottomBar_title = entry.arguments?.getString("bottomBar_title").toString()
+
+            // Navigating Back with data from a screen
+            if (!(entry.savedStateHandle.get<String>("new_bottomBar_title")
+                    .toString()).equals("null")
+            ) {
+                bottomBar_pic = entry.savedStateHandle.get<String>("new_bottomBar_pic").toString()
+                bottomBar_title =
+                    entry.savedStateHandle.get<String>("new_bottomBar_title").toString()
+                Log.d(
+                    "new_bp",
+                    "passing: PlaylistScreen: navBack: bottomBar_pic = " + bottomBar_pic + " bt = " + bottomBar_title
+                )
             }
-            PlaylistScreen(navController = navController, playlist_name = playlist_name)
+
+            // Create new playlist (boolean)
+            Log.d(
+                "new_bp",
+                "passing: PlaylistScreen: navBack: new_playlist = " + entry.arguments?.getBoolean("new_playlist")
+            )
+            if (entry.arguments?.getBoolean("new_playlist") == true) {
+
+                // Go through all videos in playlist to create default new playlist name
+                var i by remember { mutableStateOf(0) }
+                LaunchedEffect(true) {
+                    FirebaseDatabase.getInstance().getReference("playlists")
+                        .addValueEventListener(object : ValueEventListener {
+                            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                                for (childSnapshot in dataSnapshot.children) {
+                                    i++
+                                }
+                            }
+
+                            override fun onCancelled(error: DatabaseError) {}
+                        })
+                }
+
+                // Go to new playlist #i
+                PlaylistScreen(
+                    navController = navController,
+                    playlist_name = "New Playlist #" + i,
+                    bottomBar_pic,
+                    bottomBar_title
+                )
+            } else {
+
+                // Go to playlist
+                PlaylistScreen(
+                    navController = navController,
+                    playlist_name = entry.arguments?.getString("playlist_name").toString(),
+                    bottomBar_pic,
+                    bottomBar_title
+                )
+
+            }
         }
 
         // edit playlist screen
-        composable(route = ScreenRoutes.EditPlaylistScreen.route) {
-            EditPlaylistScreen(navController = navController)
+        composable(
+            route = "playlist_screen/{playlist_name}?bottomBar_pic={bottomBar_pic}&bottomBar_title={bottomBar_title}",
+            arguments = listOf(
+                navArgument("bottomBar_pic") { defaultValue = "" },
+                navArgument("bottomBar_title") { defaultValue = "" },
+                navArgument("playlist_name") { type = NavType.StringType }
+            )
+        ) { entry ->
+
+            // No Video playing / Navforward
+            var bottomBar_pic = entry.arguments?.getString("bottomBar_pic").toString()
+            var bottomBar_title = entry.arguments?.getString("bottomBar_title").toString()
+
+            // Navigating Back with data from a screen
+            if (!(entry.savedStateHandle.get<String>("new_bottomBar_title")
+                    .toString()).equals("null")
+            ) {
+                bottomBar_pic = entry.savedStateHandle.get<String>("new_bottomBar_pic").toString()
+                bottomBar_title =
+                    entry.savedStateHandle.get<String>("new_bottomBar_title").toString()
+            }
+
+            // Go to edit playlist screen
+            EditPlaylistScreen(
+                navController = navController,
+                playlist_name = entry.arguments?.getString("playlist_name").toString(),
+                bottomBar_pic,
+                bottomBar_title
+            )
         }
     }
 }

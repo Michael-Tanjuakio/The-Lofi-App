@@ -1,10 +1,14 @@
 package com.example.lofiapp.screens
 
+import android.app.Activity
+import android.content.pm.ActivityInfo
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -55,26 +60,60 @@ import com.example.lofiapp.R
 import com.example.lofiapp.data.ScreenRoutes
 import com.example.lofiapp.ui.theme.montserrat_bold
 import com.example.lofiapp.ui.theme.montserrat_light
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import java.net.URLDecoder
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun PlaylistScreen(navController: NavController, playlist_name: String) {
+fun PlaylistScreen(
+    navController: NavController,
+    playlist_name: String,
+    bottomBar_pic: String,
+    bottomBar_title: String
+) {
 
-    // bottom bar
-    var bottomBar_pic: String by rememberSaveable { mutableStateOf("") }
-    var bottomBar_title: String by rememberSaveable { mutableStateOf("") }
-    Log.d(
-        "video playing",
-        "initializeTop: " + bottomBar_title + " " + bottomBar_pic
-    )
+    // Navigate back function
+    fun navBack() {
+        // Save data when navigating back
+        navController.previousBackStackEntry
+            ?.savedStateHandle
+            ?.set("new_bottomBar_pic", bottomBar_pic)
+        navController.previousBackStackEntry
+            ?.savedStateHandle
+            ?.set("new_bottomBar_title", bottomBar_title)
 
+        // navigate back
+        navController
+            .popBackStack()
+    }
+
+    // System Back handler
+    BackHandler(true, onBack = {
+        navBack()
+    })
+
+    // Locked Vertical Orientation
+    val context = LocalContext.current
+    val activity = remember { context as Activity }
+    activity.requestedOrientation =
+        ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+
+    // System bar colors
+    val systemUiController = rememberSystemUiController()
+    systemUiController.setStatusBarColor(color = Color(0xFF24CAAC))         // System top bar color
+    systemUiController.setNavigationBarColor(color = Color(0xFF24CAAC))     // System bottom bar color
+
+    // leftover testing data
     val list = listOf("1", "1", "1", "1", "1", "1", "1", "1") // placeholder
     val video_id = "jfKfPfyJRdk" // video-id example
     val fullsize_path_img =
         "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
 
-    var openDialog by remember { mutableStateOf(false) } // delete dialog popup
+    // delete dialog popup
+    var openDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -90,7 +129,16 @@ fun PlaylistScreen(navController: NavController, playlist_name: String) {
                         modifier = Modifier
                             .size(36.dp)
                             .clickable {
-                                navController.navigate(ScreenRoutes.EditPlaylistScreen.route)
+                                navController.navigate(
+                                    "playlist_screen/" +
+                                            "playlist_name" +
+                                            "?bottomBar_pic=" + bottomBar_pic +
+                                            "&bottomBar_title=" +
+                                            URLEncoder.encode(
+                                                bottomBar_title,
+                                                StandardCharsets.UTF_8.toString()
+                                            )
+                                )
                             }
                     )
                     // padding
@@ -125,7 +173,7 @@ fun PlaylistScreen(navController: NavController, playlist_name: String) {
             // Top App Bar Components
             Row {
                 Box(modifier = Modifier.padding(start = 5.dp, top = 3.dp)) { // Back button
-                    IconButton(onClick = { navController.navigateUp() }) {
+                    IconButton(onClick = { navBack() }) {
                         Image(
                             // back symbol
                             painter = painterResource(id = R.drawable.arrow_back_icon),
@@ -155,7 +203,9 @@ fun PlaylistScreen(navController: NavController, playlist_name: String) {
         },
         content = { padding ->
             // Searched Videos Display (vertical. scroll)
-            LazyColumn(modifier = Modifier.padding(top = 20.dp, bottom = 55.dp)) {
+            LazyColumn(modifier = Modifier
+                .padding(top = 20.dp, bottom = 55.dp)
+                .fillMaxWidth()) {
                 items(items = list, itemContent = { item ->
                     Column(
                         modifier = Modifier
@@ -164,16 +214,20 @@ fun PlaylistScreen(navController: NavController, playlist_name: String) {
                         Box(modifier = Modifier
                             .clip(RoundedCornerShape(12, 12, 5, 5))
                             .align(CenterHorizontally)
-                            .clickable {
-                                navController.navigate(ScreenRoutes.VideoScreen.route)
-                            }
                         ) {
                             Row(
                                 modifier = Modifier
                                     .padding(start = 0.dp, bottom = 10.dp)
                                     .clip(RoundedCornerShape(12, 12, 5, 5))
                                     .clickable {
-                                        navController.navigate(ScreenRoutes.VideoScreen.route)
+                                        navController.navigate(
+                                            "video_screen/" +
+                                                    video_id +
+                                                    "/" +
+                                                    URLEncoder.encode( // encode to pass "&" character
+                                                        "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
+                                                        StandardCharsets.UTF_8.toString()
+                                                    ))
                                     }
                             ) { // Video Display
                                 AsyncImage( // Video thumbnail
@@ -216,19 +270,26 @@ fun PlaylistScreen(navController: NavController, playlist_name: String) {
                             modifier = Modifier
                                 .clip(RoundedCornerShape(12))
                                 .clickable {
-                                    navController.navigate("video_screen/" + bottomBar_pic)
+                                    navController.navigate(
+                                        "video_screen/"
+                                                + bottomBar_pic + "/"
+                                                + URLEncoder.encode( // encode to pass "&" character
+                                            bottomBar_title,
+                                            StandardCharsets.UTF_8.toString()
+                                        )
+                                    )
                                 }
                                 .fillMaxWidth(.95f),
                             backgroundColor = Color(0xFF3392EA),
                         ) {
                             Log.d(
                                 "video playing",
-                                "playing: " + bottomBar_title + " " + bottomBar_pic
+                                "playlist_screen: playing: " + bottomBar_title + " " + bottomBar_pic
                             )
                             Row(modifier = Modifier.fillMaxHeight()) { // wrap in row to avoid default spacing
                                 Spacer(modifier = Modifier.width(16.dp))
                                 AsyncImage( // video thumbnail
-                                    model = "https://img.youtube.com/vi/" + bottomBar_pic + "/maxres2.jpg",
+                                    model = "https://img.youtube.com/vi/$bottomBar_pic/maxres2.jpg",
                                     contentDescription = null,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
@@ -240,12 +301,15 @@ fun PlaylistScreen(navController: NavController, playlist_name: String) {
                                 Column(
                                     modifier = Modifier
                                         .align(Alignment.CenterVertically)
-                                        .fillMaxWidth(.70f)
+                                        .fillMaxWidth(.90f)
                                         .fillMaxHeight(.95f),
                                     verticalArrangement = Arrangement.Center
                                 ) {
-                                    Text( // video name
-                                        text = bottomBar_title,
+                                    Text( // video name (decodes title)
+                                        text = URLDecoder.decode(
+                                            bottomBar_title,
+                                            StandardCharsets.UTF_8.toString()
+                                        ),
                                         fontFamily = montserrat_bold,
                                         color = Color.White,
                                         modifier = Modifier
@@ -255,19 +319,6 @@ fun PlaylistScreen(navController: NavController, playlist_name: String) {
                                     )
                                 }
                             }
-                            Image( // play icon (note: make this a button)
-                                painter = painterResource(R.drawable.play_arrow_icon),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(45.dp)
-                                    .fillMaxHeight()
-                                    .align(Alignment.CenterVertically)
-                                    .clickable {
-                                        navController.navigate("video_screen/" + bottomBar_pic)
-                                    },
-                                colorFilter = ColorFilter.tint(color = Color.White)
-                            )
-                            Spacer(modifier = Modifier.width(2.dp))
                         }
                     }
                     Spacer(
