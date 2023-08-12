@@ -61,9 +61,15 @@ import com.example.lofiapp.data.ScreenRoutes
 import com.example.lofiapp.ui.theme.montserrat_bold
 import com.example.lofiapp.ui.theme.montserrat_light
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.ktx.getValue
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.util.HashMap
 
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -107,7 +113,23 @@ fun PlaylistScreen(
     systemUiController.setNavigationBarColor(color = Color(0xFF24CAAC))     // System bottom bar color
 
     // leftover testing data
-    val list = listOf("1", "1", "1", "1", "1", "1", "1", "1") // placeholder
+    val list_ = listOf("1", "1", "1", "1", "1", "1", "1", "1") // placeholder
+    var original_list = HashMap<String,String>()
+
+    // Retrieve list in database
+    // get Hashmap
+    FirebaseDatabase.getInstance().getReference("playlists")
+        .child(playlist_name)
+        .addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                original_list = dataSnapshot.value as HashMap<String, String>
+            }
+
+            override fun onCancelled(error: DatabaseError) {}
+        })
+    // convert Hashmap to list
+    val list = original_list.toList()
+
     val video_id = "jfKfPfyJRdk" // video-id example
     val fullsize_path_img =
         "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
@@ -203,17 +225,20 @@ fun PlaylistScreen(
         },
         content = { padding ->
             // Searched Videos Display (vertical. scroll)
-            LazyColumn(modifier = Modifier
-                .padding(top = 20.dp, bottom = 55.dp)
-                .fillMaxWidth()) {
+            LazyColumn(
+                modifier = Modifier
+                    .padding(top = 20.dp, bottom = 55.dp)
+                    .fillMaxWidth()
+            ) {
                 items(items = list, itemContent = { item ->
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
                     ) {
-                        Box(modifier = Modifier
-                            .clip(RoundedCornerShape(12, 12, 5, 5))
-                            .align(CenterHorizontally)
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12, 12, 5, 5))
+                                .align(CenterHorizontally)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -227,7 +252,8 @@ fun PlaylistScreen(
                                                     URLEncoder.encode( // encode to pass "&" character
                                                         "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
                                                         StandardCharsets.UTF_8.toString()
-                                                    ))
+                                                    )
+                                        )
                                     }
                             ) { // Video Display
                                 AsyncImage( // Video thumbnail

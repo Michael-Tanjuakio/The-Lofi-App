@@ -20,6 +20,7 @@ import com.example.lofiapp.screens.VideoScreen
 import com.example.lofiapp.screens.PlaylistScreen
 import com.example.lofiapp.screens.SplashScreen
 import com.example.lofiapp.screens.single_playlist
+import com.example.lofiapp.screens.youtubeVideo
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
@@ -175,31 +176,48 @@ fun Navigation() {
             }
 
             // Create new playlist (boolean)
-            Log.d(
-                "new_bp",
-                "passing: PlaylistScreen: navBack: new_playlist = " + entry.arguments?.getBoolean("new_playlist")
-            )
             if (entry.arguments?.getBoolean("new_playlist") == true) {
 
-                // Go through all videos in playlist to create default new playlist name
                 var i by remember { mutableStateOf(0) }
                 LaunchedEffect(true) {
+
+                    Log.d(
+                        "new_bp",
+                        "passing: PlaylistScreen: navBack: new_playlist = " + entry.arguments?.getBoolean(
+                            "new_playlist"
+                        )
+                    )
+
+                    // Get children count
                     FirebaseDatabase.getInstance().getReference("playlists")
                         .addValueEventListener(object : ValueEventListener {
                             override fun onDataChange(dataSnapshot: DataSnapshot) {
-                                for (childSnapshot in dataSnapshot.children) {
-                                    i++
-                                }
+                                i = dataSnapshot.childrenCount.toInt()
                             }
 
                             override fun onCancelled(error: DatabaseError) {}
                         })
+                }.apply {
+
+                    LaunchedEffect(true) {
+
+                        // Create playlist: "New Playlist #i" and add to database
+                        FirebaseDatabase.getInstance().getReference("playlists")
+                            .child("New Playlist " + i).setValue(
+                                single_playlist(
+                                    "New Playlist " + i,
+                                    0,
+                                    mutableListOf<youtubeVideo?>()
+                                )
+                            )
+
+                    }
                 }
 
-                // Go to new playlist #i
+                // Go to new playlist i
                 PlaylistScreen(
                     navController = navController,
-                    playlist_name = "New Playlist #" + i,
+                    playlist_name = "New Playlist " + (i-2),
                     bottomBar_pic,
                     bottomBar_title
                 )
