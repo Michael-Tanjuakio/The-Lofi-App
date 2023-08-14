@@ -138,12 +138,17 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                     override fun onCancelled(error: DatabaseError) {}
                 })
         }
+    }
+
+    var playlistCount by remember { mutableStateOf(0) }
+    LaunchedEffect(key1 = true) {
 
         // Retrieve playlists list from database (FIX LATER)
         playlists.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(dataSnapshot: DataSnapshot) {
                 for (childSnapshot in dataSnapshot.children) {
                     playlist_List.add(childSnapshot.getValue<single_playlist?>())
+                    playlistCount = dataSnapshot.childrenCount.toInt()
                 }
             }
 

@@ -154,7 +154,7 @@ fun Navigation() {
                 navArgument("bottomBar_pic") { defaultValue = "" },
                 navArgument("bottomBar_title") { defaultValue = "" },
                 navArgument("playlist_name") { type = NavType.StringType },
-                navArgument("new_playlist") { type = NavType.BoolType }
+                navArgument("new_playlist") { type = NavType.BoolType },
             )
         ) { entry ->
 
@@ -178,32 +178,17 @@ fun Navigation() {
             // Create new playlist (boolean)
             if (entry.arguments?.getBoolean("new_playlist") == true) {
 
+                // get children in home screen (top)
+                // replace playlist name with path string (object name)
+                // change display for empty playlist
+
                 var i by remember { mutableStateOf(0) }
-                LaunchedEffect(true) {
-
-                    Log.d(
-                        "new_bp",
-                        "passing: PlaylistScreen: navBack: new_playlist = " + entry.arguments?.getBoolean(
-                            "new_playlist"
-                        )
-                    )
-
-                    // Get children count
-                    FirebaseDatabase.getInstance().getReference("playlists")
-                        .addValueEventListener(object : ValueEventListener {
-                            override fun onDataChange(dataSnapshot: DataSnapshot) {
-                                i = dataSnapshot.childrenCount.toInt()
-                            }
-
-                            override fun onCancelled(error: DatabaseError) {}
-                        })
-                }.apply {
 
                     LaunchedEffect(true) {
 
                         // Create playlist: "New Playlist #i" and add to database
                         FirebaseDatabase.getInstance().getReference("playlists")
-                            .child("New Playlist " + i).setValue(
+                            .child("Playlist " + i).setValue(
                                 single_playlist(
                                     "New Playlist " + i,
                                     0,
@@ -212,7 +197,6 @@ fun Navigation() {
                             )
 
                     }
-                }
 
                 // Go to new playlist i
                 PlaylistScreen(
