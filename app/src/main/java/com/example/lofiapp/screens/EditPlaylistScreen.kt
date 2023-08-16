@@ -77,6 +77,11 @@ import com.example.lofiapp.data.ScreenRoutes
 import com.example.lofiapp.ui.theme.flamenco_regular
 import com.example.lofiapp.ui.theme.montserrat_bold
 import com.example.lofiapp.ui.theme.montserrat_light
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.ktx.getValue
 import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.detectReorderAfterLongPress
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
@@ -90,10 +95,19 @@ import java.util.Collections.list
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun EditPlaylistScreen(navController: NavController, playlist_name: String, bottomBar_pic: String, bottomBar_title: String) {
+fun EditPlaylistScreen(
+    navController: NavController,
+    playlist_path: String,
+    bottomBar_pic: String,
+    bottomBar_title: String
+) {
 
     // Navigate back function
-    fun navBack() {
+    fun navBack(rewrite: single_playlist) {
+        // Rewrite playlist to database
+        FirebaseDatabase.getInstance().getReference("playlists")
+            .child(playlist_path).setValue(rewrite)
+
         // Save data when navigating back
         navController.previousBackStackEntry
             ?.savedStateHandle
@@ -107,11 +121,6 @@ fun EditPlaylistScreen(navController: NavController, playlist_name: String, bott
             .popBackStack()
     }
 
-    // System Back handler
-    BackHandler(true, onBack = {
-        navBack()
-    })
-
     // Locked Vertical Orientation
     val context = LocalContext.current
     val activity = remember { context as Activity }
@@ -119,7 +128,70 @@ fun EditPlaylistScreen(navController: NavController, playlist_name: String, bott
         ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
 
     // Sample list
-    var list = remember { mutableStateOf(listOf("abc 1", "letter 2", "sing 3", "thai 4","five 5", "big 6",)) }
+    var list_ = remember {
+        mutableStateOf(
+            listOf(
+                "abc 1",
+                "letter 2",
+                "sing 3",
+                "thai 4",
+                "five 5",
+                "big 6",
+            )
+        )
+    }
+
+    // Make default empty playlist
+    var playlist by remember { mutableStateOf(single_playlist()) }
+
+    // Editable playlist title
+    var text by remember { mutableStateOf(playlist.playlistTitle) }
+
+    // Retrieve list in database
+    LaunchedEffect(true) {
+        FirebaseDatabase.getInstance().getReference("playlists")
+            .child(playlist_path)
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    playlist = dataSnapshot.getValue<single_playlist>()!!
+                    text = playlist.playlistTitle
+                }
+
+                override fun onCancelled(error: DatabaseError) {}
+            })
+    }
+
+    Log.d(
+        "new_bp",
+        "opening playlist = " + playlist_path +
+                "\nplaylist id = " + playlist.playlistID +
+                "\nplaylist title = " + playlist.playlistTitle
+    )
+
+    // Popups
+    var openDialog by remember { mutableStateOf(false) } // delete dialog popup
+    var openNoTitleDialog by remember { mutableStateOf(false) } // no title dialog popup
+    var openDeleteVideoDialog by remember { mutableStateOf(false) } // delete video dialog popup
+    var deleteVideo by remember { mutableStateOf(false) } // delete video dialog popup
+    var index by remember { mutableStateOf(0) } // delete video dialog popup
+
+    // System Back handler
+    BackHandler(true, onBack = {
+        if (!text.isEmpty())
+            navBack(
+                single_playlist(
+                    playlist.playlistID,
+                    text,
+                    playlist.playlistCount,
+                    playlist.videoList
+                )
+            )
+        else
+            openNoTitleDialog = true
+    })
+
+    // Get playlist of videos
+    val list = remember { mutableStateOf(listOf(playlist.videoList)) }
 
     // Reorderable Lazy List State
     val state = rememberReorderableLazyListState(onMove = { from, to ->
@@ -133,15 +205,7 @@ fun EditPlaylistScreen(navController: NavController, playlist_name: String, bott
     val fullsize_path_img =
         "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
 
-    // Editable playlist title
-    var text by remember { mutableStateOf(playlist_name) }
 
-    // Popups
-    var openDialog by remember { mutableStateOf(false) } // delete dialog popup
-    var openNoTitleDialog by remember { mutableStateOf(false) } // no title dialog popup
-    var openDeleteVideoDialog by remember { mutableStateOf(false) } // delete video dialog popup
-    var deleteVideo by remember { mutableStateOf(false) } // delete video dialog popup
-    var index by remember { mutableStateOf(0) } // delete video dialog popup
 
 
     Scaffold(
@@ -176,7 +240,14 @@ fun EditPlaylistScreen(navController: NavController, playlist_name: String, bott
                 Box(modifier = Modifier.padding(start = 5.dp, top = 3.dp)) { // Back button
                     IconButton(onClick = {
                         if (!text.isEmpty())
-                            navController.navigateUp()
+                            navBack(
+                                single_playlist(
+                                    playlist.playlistID,
+                                    text,
+                                    playlist.playlistCount,
+                                    playlist.videoList
+                                )
+                            )
                         else
                             openNoTitleDialog = true
                     }) {
@@ -245,7 +316,7 @@ fun EditPlaylistScreen(navController: NavController, playlist_name: String, bott
                     .detectReorderAfterLongPress(state),
                 state = state.listState,
             ) {
-                items(list.value, {it}) { item ->
+                items(list.value, { it }) { item ->
                     ReorderableItem(state, key = item) { isDragging ->
                         val elevation = animateDpAsState(if (isDragging) 16.dp else 0.dp)
 
@@ -307,7 +378,9 @@ fun EditPlaylistScreen(navController: NavController, playlist_name: String, bott
                                             .align(CenterVertically)
                                             .clip(RoundedCornerShape(12))
                                             .clickable {
-                                                index = list.component1().indexOf(item)
+                                                index = list
+                                                    .component1()
+                                                    .indexOf(item)
                                                 Log.d(
                                                     "deleteVideo",
                                                     "finding " + index
@@ -319,9 +392,15 @@ fun EditPlaylistScreen(navController: NavController, playlist_name: String, bott
 
                                         Log.d(
                                             "deleteVideo",
-                                            "removed index " + index + " " + list.value[index] + "\n" + list.value.subList(0,index) + " " + list.value.subList(index+1,list.value.size)
+                                            "removed index " + index + " " + list.value[index] + "\n" + list.value.subList(
+                                                0,
+                                                index
+                                            ) + " " + list.value.subList(index + 1, list.value.size)
                                         )
-                                        list.value = list.value.subList(0,index) + list.value.subList(index+1,list.value.size)
+                                        list.value = list.value.subList(
+                                            0,
+                                            index
+                                        ) + list.value.subList(index + 1, list.value.size)
                                         deleteVideo = false
                                     }
 

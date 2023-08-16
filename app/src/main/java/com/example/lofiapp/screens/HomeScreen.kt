@@ -180,7 +180,7 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                 },
                 backgroundColor = Color(0xFF24CAAC),
                 actions = {
-                    // Create Playlist button
+                    // Create New Playlist button
                     IconButton(
                         onClick = {
                             navController.navigate(
@@ -192,7 +192,8 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                         URLEncoder.encode(
                                             bottomBar_title,
                                             StandardCharsets.UTF_8.toString()
-                                        )
+                                        ) +
+                                        "&playlist_count=" + playlistCount
                             )
                         }
                     ) {
@@ -335,7 +336,17 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                     .padding(start = 16.dp)
                                     .clip(RoundedCornerShape(12, 12, 5, 5))
                                     .clickable {
-                                        navController.navigate("playlist_screen/" + item?.playlistTitle.toString())
+                                        navController.navigate(
+                                            "playlist_screen" +
+                                                    "/" + item?.playlistID.toString() +
+                                                    "?new_playlist=" + false +
+                                                    "&bottomBar_pic=" + bottomBar_pic +
+                                                    "&bottomBar_title=" +
+                                                    URLEncoder.encode(
+                                                        bottomBar_title,
+                                                        StandardCharsets.UTF_8.toString()
+                                                    )
+                                        )
                                     }
                             ) {
                                 Box() {

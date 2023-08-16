@@ -34,6 +34,7 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -76,7 +77,7 @@ import java.util.HashMap
 @Composable
 fun PlaylistScreen(
     navController: NavController,
-    playlist_name: String,
+    playlist_path: String,
     bottomBar_pic: String,
     bottomBar_title: String
 ) {
@@ -114,25 +115,33 @@ fun PlaylistScreen(
 
     // leftover testing data
     val list_ = listOf("1", "1", "1", "1", "1", "1", "1", "1") // placeholder
-    var original_list = HashMap<String,String>()
-
-    // Retrieve list in database
-    // get Hashmap
-    FirebaseDatabase.getInstance().getReference("playlists")
-        .child(playlist_name)
-        .addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(dataSnapshot: DataSnapshot) {
-                original_list = dataSnapshot.value as HashMap<String, String>
-            }
-
-            override fun onCancelled(error: DatabaseError) {}
-        })
-    // convert Hashmap to list
-    val list = original_list.toList()
-
     val video_id = "jfKfPfyJRdk" // video-id example
     val fullsize_path_img =
         "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
+
+    // Make default empty playlist
+    var playlist by remember { mutableStateOf(single_playlist())}
+
+    // Retrieve list in database
+    LaunchedEffect(true) {
+        FirebaseDatabase.getInstance().getReference("playlists")
+            .child(playlist_path)
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    playlist = dataSnapshot.getValue<single_playlist>()!!
+                }
+                override fun onCancelled(error: DatabaseError) {}
+            })
+    }
+    Log.d(
+        "new_bp",
+        "opening playlist = " + playlist_path +
+                "\nplaylist id = " + playlist.playlistID +
+                "\nplaylist title = " + playlist.playlistTitle
+    )
+
+    // Get playlist of videos
+    val list = playlist.videoList
 
     // delete dialog popup
     var openDialog by remember { mutableStateOf(false) }
@@ -152,8 +161,8 @@ fun PlaylistScreen(
                             .size(36.dp)
                             .clickable {
                                 navController.navigate(
-                                    "playlist_screen/" +
-                                            "playlist_name" +
+                                    "edit_playlist_screen" +
+                                            "/" + playlist.playlistID +
                                             "?bottomBar_pic=" + bottomBar_pic +
                                             "&bottomBar_title=" +
                                             URLEncoder.encode(
@@ -210,7 +219,7 @@ fun PlaylistScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = playlist_name,
+                        text = playlist.playlistTitle,
                         fontFamily = montserrat_bold,
                         color = Color.White,
                         modifier = Modifier

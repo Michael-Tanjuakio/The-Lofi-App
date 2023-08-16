@@ -43,7 +43,9 @@ fun Navigation() {
 
         // home screen
         composable(
-            route = "home_screen?bottomBar_pic={bottomBar_pic}?bottomBar_title={bottomBar_title}",
+            route = "home_screen" +
+                    "?bottomBar_pic={bottomBar_pic}" +
+                    "?bottomBar_title={bottomBar_title}",
             arguments = listOf(
                 navArgument("bottomBar_pic") { defaultValue = "" },
                 navArgument("bottomBar_title") { defaultValue = "" }
@@ -76,7 +78,9 @@ fun Navigation() {
 
         // search screen
         composable(
-            route = "search_screen?bottomBar_pic={bottomBar_pic}&bottomBar_title={bottomBar_title}",
+            route = "search_screen" +
+                    "?bottomBar_pic={bottomBar_pic}" +
+                    "&bottomBar_title={bottomBar_title}",
             arguments = listOf(
                 navArgument("bottomBar_pic") { defaultValue = "" },
                 navArgument("bottomBar_title") { defaultValue = "" }
@@ -115,7 +119,9 @@ fun Navigation() {
 
         // video screen
         composable(
-            route = "video_screen/{bottomBar_pic}/{bottomBar_title}",
+            route = "video_screen" +
+                    "/{bottomBar_pic}" +
+                    "/{bottomBar_title}",
             arguments = listOf(
                 navArgument("bottomBar_pic") { defaultValue = "" },
                 navArgument("bottomBar_title") { defaultValue = "" }
@@ -149,13 +155,20 @@ fun Navigation() {
 
         // playlist screen
         composable(
-            route = "playlist_screen/{playlist_name}?new_playlist={new_playlist}&bottomBar_pic={bottomBar_pic}&bottomBar_title={bottomBar_title}",
+            route = "playlist_screen" +
+                    "/{playlist_id}" +
+                    "?new_playlist={new_playlist}" +
+                    "&bottomBar_pic={bottomBar_pic}" +
+                    "&bottomBar_title={bottomBar_title}" +
+                    "&playlist_count={playlist_count}",
             arguments = listOf(
+                navArgument("playlist_id") { type = NavType.StringType },
+                navArgument("new_playlist") { type = NavType.BoolType },
                 navArgument("bottomBar_pic") { defaultValue = "" },
                 navArgument("bottomBar_title") { defaultValue = "" },
-                navArgument("playlist_name") { type = NavType.StringType },
-                navArgument("new_playlist") { type = NavType.BoolType },
-            )
+                navArgument("playlist_count") { defaultValue = 0 },
+
+                )
         ) { entry ->
 
             // No Video playing / Navforward
@@ -177,31 +190,35 @@ fun Navigation() {
 
             // Create new playlist (boolean)
             if (entry.arguments?.getBoolean("new_playlist") == true) {
-
-                // get children in home screen (top)
-                // replace playlist name with path string (object name)
+                // Remove null checkers (? symbols)
+                // get children in home screen (top) DONE
+                // add playlist id DONE
                 // change display for empty playlist
+                // fix bottom bar for delete in playlist/edit playlist screen
 
-                var i by remember { mutableStateOf(0) }
+                var i = entry.arguments!!.getInt("playlist_count")
+                Log.d(
+                    "new_bp",
+                    "passing: playlist_count = " + i
+                )
 
-                    LaunchedEffect(true) {
-
-                        // Create playlist: "New Playlist #i" and add to database
-                        FirebaseDatabase.getInstance().getReference("playlists")
-                            .child("Playlist " + i).setValue(
-                                single_playlist(
-                                    "New Playlist " + i,
-                                    0,
-                                    mutableListOf<youtubeVideo?>()
-                                )
+                // Create playlist: "New Playlist #i" and add to database
+                LaunchedEffect(true) {
+                    FirebaseDatabase.getInstance().getReference("playlists")
+                        .child("Playlist " + i).setValue(
+                            single_playlist(
+                                "Playlist " + i, // path string
+                                "New Playlist " + i, // title of playlist
+                                0, // playlist video count
+                                mutableListOf<youtubeVideo?>() // list of videos
                             )
-
-                    }
+                        )
+                }
 
                 // Go to new playlist i
                 PlaylistScreen(
                     navController = navController,
-                    playlist_name = "New Playlist " + (i-2),
+                    playlist_path = "Playlist " + i,
                     bottomBar_pic,
                     bottomBar_title
                 )
@@ -210,7 +227,7 @@ fun Navigation() {
                 // Go to playlist
                 PlaylistScreen(
                     navController = navController,
-                    playlist_name = entry.arguments?.getString("playlist_name").toString(),
+                    playlist_path = entry.arguments?.getString("playlist_id").toString(),
                     bottomBar_pic,
                     bottomBar_title
                 )
@@ -220,11 +237,14 @@ fun Navigation() {
 
         // edit playlist screen
         composable(
-            route = "playlist_screen/{playlist_name}?bottomBar_pic={bottomBar_pic}&bottomBar_title={bottomBar_title}",
+            route = "edit_playlist_screen" +
+                    "/{playlist_path}" +
+                    "?bottomBar_pic={bottomBar_pic}" +
+                    "&bottomBar_title={bottomBar_title}",
             arguments = listOf(
+                navArgument("playlist_path") { type = NavType.StringType },
                 navArgument("bottomBar_pic") { defaultValue = "" },
-                navArgument("bottomBar_title") { defaultValue = "" },
-                navArgument("playlist_name") { type = NavType.StringType }
+                navArgument("bottomBar_title") { defaultValue = "" }
             )
         ) { entry ->
 
@@ -244,7 +264,7 @@ fun Navigation() {
             // Go to edit playlist screen
             EditPlaylistScreen(
                 navController = navController,
-                playlist_name = entry.arguments?.getString("playlist_name").toString(),
+                playlist_path = entry.arguments?.getString("playlist_path").toString(),
                 bottomBar_pic,
                 bottomBar_title
             )

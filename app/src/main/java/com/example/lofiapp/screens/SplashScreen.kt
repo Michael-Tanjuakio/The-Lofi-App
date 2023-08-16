@@ -48,14 +48,15 @@ import kotlin.time.Duration.Companion.seconds
 
 @IgnoreExtraProperties
 data class youtubeVideo(
-    val videoTitle: String? = null,
-    val videoID: String? = null
+    val videoTitle: String = "",
+    val videoID: String = ""
 ) {}
 
 @IgnoreExtraProperties
 data class single_playlist(
-    val playlistTitle: String? = null,
-    val playlistCount: Int? = null,
+    val playlistID: String = "",
+    val playlistTitle: String = "",
+    val playlistCount: Int = 0,
     val videoList : MutableList<youtubeVideo?> = mutableListOf()
 )  {}
 
@@ -138,7 +139,11 @@ fun SplashScreen(navController: NavController) {
         val videos = FirebaseDatabase.getInstance().getReference("videos")
         val playlists = FirebaseDatabase.getInstance().getReference("playlists")
         playlists.child("add_playlist").setValue(
-            single_playlist("Create New Playlist",  0, mutableListOf())
+            single_playlist(
+                "Create New Playlist",
+                "Create New Playlist",
+                0,
+                mutableListOf())
         )
         videos.child("video1").setValue(
             youtubeVideo(
