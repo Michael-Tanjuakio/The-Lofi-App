@@ -174,9 +174,12 @@ fun Navigation() {
             // No Video playing / Navforward
             var bottomBar_pic = entry.arguments?.getString("bottomBar_pic").toString()
             var bottomBar_title = entry.arguments?.getString("bottomBar_title").toString()
+            var new_playlist = entry.arguments?.getBoolean("new_playlist")
+            var playlist_id = entry.arguments?.getString("playlist_id")
 
             // Navigating Back with data from a screen
-            if (!(entry.savedStateHandle.get<String>("new_bottomBar_title")
+            if (
+                !(entry.savedStateHandle.get<String>("new_bottomBar_title")
                     .toString()).equals("null")
             ) {
                 bottomBar_pic = entry.savedStateHandle.get<String>("new_bottomBar_pic").toString()
@@ -187,13 +190,21 @@ fun Navigation() {
                     "passing: PlaylistScreen: navBack: bottomBar_pic = " + bottomBar_pic + " bt = " + bottomBar_title
                 )
             }
+            if (
+                !((entry.savedStateHandle.get<Boolean>("new_playlist"))
+                    .toString().equals("null"))
+            ) {
+                new_playlist = entry.savedStateHandle.get<Boolean>("new_playlist")
+                playlist_id = entry.savedStateHandle.get<String>("playlist_id")
+            }
 
             // Create new playlist (boolean)
-            if (entry.arguments?.getBoolean("new_playlist") == true) {
-                // Remove null checkers (? symbols)
+            if (new_playlist == true) {
                 // get children in home screen (top) DONE
                 // add playlist id DONE
-                // change display for empty playlist
+                // add "add" button in home screen and search screen
+                // change display for empty playlist DONE
+                // add remove function
                 // fix bottom bar for delete in playlist/edit playlist screen
 
                 var i = entry.arguments!!.getInt("playlist_count")
@@ -225,12 +236,14 @@ fun Navigation() {
             } else {
 
                 // Go to playlist
-                PlaylistScreen(
-                    navController = navController,
-                    playlist_path = entry.arguments?.getString("playlist_id").toString(),
-                    bottomBar_pic,
-                    bottomBar_title
-                )
+                if (playlist_id != null) {
+                    PlaylistScreen(
+                        navController = navController,
+                        playlist_path = playlist_id,
+                        bottomBar_pic,
+                        bottomBar_title
+                    )
+                }
 
             }
         }

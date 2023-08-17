@@ -2,14 +2,22 @@ package com.example.lofiapp.screens
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import android.graphics.Paint
 import android.util.Log
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,41 +31,58 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.BottomNavigation
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.Scaffold
+import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.lofiapp.R
@@ -112,8 +137,24 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
     val videos = FirebaseDatabase.getInstance().getReference("videos")
 
     // App list display
-    var recList by remember { mutableStateOf(mutableListOf<youtubeVideo?>()) }
-    val playlist_List by remember { mutableStateOf(mutableListOf<single_playlist?>()) }
+    val recList by remember { mutableStateOf(mutableListOf<youtubeVideo?>()) }
+    val playlist_List = remember { mutableStateListOf<single_playlist?>() }
+    val addPlaylist_List = remember { mutableStateListOf<String>() }
+
+    // Popups
+    var showAddPlaylist by remember { mutableStateOf(false) }
+    var showCreateNewPlaylist by remember { mutableStateOf(false) }
+    var createPlaylist by remember { mutableStateOf(false) } // no title dialog popup
+    var openNoTitleDialog by remember { mutableStateOf(false) }
+
+    // Generate playlist list once
+    var generateList by remember { mutableStateOf(true) }
+
+    // Generate playlist list once
+    var addVideo by remember { mutableStateOf(youtubeVideo()) }
+
+    // Generate playlist list once
+    var addVideoToPlaylists by remember { mutableStateOf(false) }
 
     // Read from the database
     LaunchedEffect(itemCount) {
@@ -132,7 +173,8 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
             videos.child("video" + it)
                 .addValueEventListener(object : ValueEventListener {
                     override fun onDataChange(dataSnapshot: DataSnapshot) {
-                        recList.add(dataSnapshot.getValue<youtubeVideo?>())
+                        if (!showAddPlaylist)
+                            recList.add(dataSnapshot.getValue<youtubeVideo?>())
                     }
 
                     override fun onCancelled(error: DatabaseError) {}
@@ -140,21 +182,24 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
         }
     }
 
+    // Retrieve playlists list from database
     var playlistCount by remember { mutableStateOf(0) }
     LaunchedEffect(key1 = true) {
-
-        // Retrieve playlists list from database (FIX LATER)
         playlists.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(dataSnapshot: DataSnapshot) {
                 for (childSnapshot in dataSnapshot.children) {
-                    playlist_List.add(childSnapshot.getValue<single_playlist?>())
-                    playlistCount = dataSnapshot.childrenCount.toInt()
+                    if (generateList) {
+                        playlist_List.add(childSnapshot.getValue<single_playlist?>())
+                        playlistCount = dataSnapshot.childrenCount.toInt()
+                    }
                 }
+
             }
 
             override fun onCancelled(error: DatabaseError) {}
         })
     }
+
 
     // System bar colors
     val systemUiController = rememberSystemUiController()
@@ -163,6 +208,9 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
 
     // Scroll State (used for vertical scrolling)
     val scrollState = rememberScrollState()
+
+    // Interaction Source
+    val interactionSource = remember { MutableInteractionSource() }
 
     // Scaffold (Top bar, Content, Bottom Bar)
     Scaffold(
@@ -197,7 +245,7 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                             )
                         }
                     ) {
-                        // Search Icon
+                        // create new playlist icon
                         Image(
                             painter = painterResource(id = R.drawable.playlist_add_icon),
                             contentDescription = null,
@@ -305,6 +353,28 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                     fontSize = 16.sp,
                                     fontFamily = montserrat_light
                                 )
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .align(Alignment.CenterHorizontally)
+                                ) {
+                                    // Add to playlist button
+                                    Image(
+                                        painter = painterResource(id = R.drawable.add_new_icon),
+                                        contentDescription = null,
+                                        colorFilter = ColorFilter.tint(color = Color.Black),
+                                        modifier = Modifier
+                                            .size(35.dp)
+                                            .border(2.dp, Color.Red)
+                                            .clickable {
+                                                if (it != null) {
+                                                    addVideo = it
+                                                }
+                                                showAddPlaylist = true
+                                            }
+                                    )
+
+                                }
                             }
                         }
                     }
@@ -336,30 +406,36 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                     .padding(start = 16.dp)
                                     .clip(RoundedCornerShape(12, 12, 5, 5))
                                     .clickable {
-                                        navController.navigate(
-                                            "playlist_screen" +
-                                                    "/" + item?.playlistID.toString() +
-                                                    "?new_playlist=" + false +
-                                                    "&bottomBar_pic=" + bottomBar_pic +
-                                                    "&bottomBar_title=" +
-                                                    URLEncoder.encode(
-                                                        bottomBar_title,
-                                                        StandardCharsets.UTF_8.toString()
-                                                    )
-                                        )
+                                        if (!item?.playlistTitle.equals("Create New Playlist"))
+                                            navController.navigate(
+                                                "playlist_screen" +
+                                                        "/" + item?.playlistID.toString() +
+                                                        "?new_playlist=" + false +
+                                                        "&bottomBar_pic=" + bottomBar_pic +
+                                                        "&bottomBar_title=" +
+                                                        URLEncoder.encode(
+                                                            bottomBar_title,
+                                                            StandardCharsets.UTF_8.toString()
+                                                        )
+                                            )
+                                        else
+                                            navController.navigate(
+                                                "playlist_screen" +
+                                                        "/none" +
+                                                        "?new_playlist=" + true +
+                                                        "&bottomBar_pic=" + bottomBar_pic +
+                                                        "&bottomBar_title=" +
+                                                        URLEncoder.encode(
+                                                            bottomBar_title,
+                                                            StandardCharsets.UTF_8.toString()
+                                                        ) +
+                                                        "&playlist_count=" + playlistCount
+                                            )
                                     }
                             ) {
                                 Box() {
-                                    if (!item?.playlistTitle.equals("Create New Playlist")) {
-                                        AsyncImage( // Video Thumbnail
-                                            model = "https://img.youtube.com/vi/" + item?.playlistTitle.toString() + "/maxres2.jpg",
-                                            contentDescription = null,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier
-                                                .size(width = 220.dp, height = 134.dp)
-                                                .clip(RoundedCornerShape(12))
-                                        )
-                                    } else {
+                                    // Create New Playlist button
+                                    if (item?.playlistTitle.equals("Create New Playlist")) {
                                         Image(
                                             painter = painterResource(id = R.drawable.add_new_icon),
                                             colorFilter = ColorFilter.tint(Color.White),
@@ -370,7 +446,17 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                                 .background(Color.Black.copy(alpha = 0.6f))
                                         )
                                     }
+
+                                    // Playlist with videos button
                                     if (item?.playlistCount!! > 0) {
+                                        AsyncImage( // Video Thumbnail
+                                            model = "https://img.youtube.com/vi/" + item?.videoList?.get(0)?.videoID.toString() + "/maxres2.jpg",
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .size(width = 220.dp, height = 134.dp)
+                                                .clip(RoundedCornerShape(12))
+                                        )
                                         Box( // Transparent background
                                             modifier = Modifier
                                                 .size(width = 105.dp, height = 134.dp)
@@ -386,6 +472,16 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                                 fontFamily = montserrat_light
                                             )
                                         }
+                                    }
+
+                                    // Playlist without videos button
+                                    if (item?.playlistCount == 0 && !item?.playlistTitle.equals("Create New Playlist")) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(width = 220.dp, height = 134.dp)
+                                                .clip(RoundedCornerShape(12))
+                                                .background(Color.Black.copy(alpha = 0.1f))
+                                        )
                                     }
                                 }
                                 Text( // Playlist Name
@@ -511,6 +607,494 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
             }
         }
     )
+
+    // Popups
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+
+        // Display add playlist
+        AnimatedVisibility(
+            visible = showAddPlaylist,
+            enter = fadeIn(animationSpec = tween(1000)),
+            exit = fadeOut(animationSpec = tween(1000)),
+            modifier = Modifier.align(Alignment.Center)
+        ) {
+
+            // System back button
+            BackHandler(
+                enabled = true,
+                onBack = { showAddPlaylist = false })
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null
+                    ) {}
+            ) {
+
+                // Back button
+                IconButton(onClick = { showAddPlaylist = false }) {
+                    Image(
+                        // back symbol
+                        painter = painterResource(id = R.drawable.arrow_back_icon),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(35.dp)
+                            .align(Alignment.TopStart),
+                        colorFilter = ColorFilter.tint(color = Color.White),
+                    )
+                }
+
+                Box( // white box
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6, 6, 0, 0))
+                        .background(Color.White)
+                        .fillMaxWidth(.95f)
+                        .align(Alignment.BottomCenter)
+                        .fillMaxHeight(0.65f)
+                ) {
+                    Column(modifier = Modifier.fillMaxHeight()) {
+                        Box( // green box
+                            modifier = Modifier
+                                .background(Color(0xFF24CAAC))
+                                .fillMaxHeight(0.18f)
+                                .fillMaxWidth()
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.CenterStart)
+                                    .padding(start = 20.dp)
+                            ) {
+                                Text( // Title Text
+                                    text = "Add to Playlist",
+                                    fontSize = 23.sp,
+                                    fontFamily = montserrat_bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                        // Playlist list
+                        Box(
+                            modifier = Modifier.padding(
+                                start = 20.dp,
+                                top = 10.dp,
+                                end = 20.dp
+                            )
+                        ) {
+                            Column() {
+                                Row(modifier = Modifier.clickable() {
+                                    showCreateNewPlaylist = true
+                                }) {
+                                    Text( // Title Text
+                                        text = "Create New Playlist",
+                                        fontSize = 20.sp,
+                                        fontFamily = montserrat_light,
+                                        color = Color.Black,
+                                        modifier = Modifier.fillMaxWidth(.80f)
+                                    )
+
+                                    Spacer(Modifier.weight(1f))
+
+                                    Image( // add new icon
+                                        painter = painterResource(id = R.drawable.add_new_icon),
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .size(35.dp)
+                                            .align(Alignment.CenterVertically)
+                                            .clickable(onClick = {
+                                                showCreateNewPlaylist = true
+                                            }),
+                                        colorFilter = ColorFilter.tint(color = Color.Gray)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(7.dp))
+
+                                Box( // line seperater
+                                    modifier = Modifier
+                                        .background(Color(0xFF828282))
+                                        .fillMaxWidth(1f)
+                                        .height(2.dp)
+                                )
+
+                                Spacer(modifier = Modifier.height(7.dp))
+
+                                Box(modifier = Modifier.fillMaxHeight(.75f)) {
+                                    LazyColumn() {
+                                        itemsIndexed(playlist_List) { index, item ->
+
+                                            // Update playlist(s)
+                                            if (addVideoToPlaylists) {
+                                                var playlist = item
+                                                if (playlist != null) {
+                                                    playlist.videoList.add(addVideo)
+                                                }
+                                                addPlaylist_List.forEach() { it ->
+                                                    if (playlist != null) {
+                                                        playlists.child(it).setValue(
+                                                            single_playlist(
+                                                                playlist.playlistID,
+                                                                playlist.playlistTitle,
+                                                                ++playlist.playlistCount,
+                                                                playlist.videoList
+                                                            )
+                                                        )
+                                                    }
+                                                }
+                                                addVideoToPlaylists = false
+                                            }
+
+                                            // Checkbox icon
+                                            var checkBoxIcon by remember { mutableStateOf(false) }
+
+                                            Row(modifier = Modifier.clickable() {
+                                                // Change the icon
+                                                checkBoxIcon = !checkBoxIcon
+
+                                                // add to list
+                                                if (item != null && checkBoxIcon) {
+                                                    addPlaylist_List.add(item.playlistID)
+                                                }
+
+                                            }) {
+
+                                                if (item != null && !(item.playlistTitle.equals("Create New Playlist"))) {
+                                                    Text( // Playlist Title
+                                                        text = item.playlistTitle,
+                                                        fontSize = 20.sp,
+                                                        fontFamily = montserrat_light,
+                                                        color = Color.Black,
+                                                        modifier = Modifier
+                                                            .fillMaxWidth(.80f)
+                                                    )
+
+                                                    Spacer(Modifier.weight(1f))
+
+                                                    Image( // add to playlist icon
+                                                        painter = painterResource(
+                                                            id =
+                                                            if (!checkBoxIcon)
+                                                                R.drawable.check_box_outline_blank_icon
+                                                            else
+                                                                R.drawable.check_box_icon
+                                                        ),
+                                                        contentDescription = null,
+                                                        modifier = Modifier
+                                                            .size(35.dp)
+                                                            .align(Alignment.CenterVertically)
+                                                            .clickable() {
+                                                                // Change the icon
+                                                                checkBoxIcon = !checkBoxIcon
+
+                                                                // add to list
+                                                                if (item != null && checkBoxIcon) {
+                                                                    addPlaylist_List.add(item.playlistID)
+                                                                }
+                                                            },
+                                                        colorFilter = ColorFilter.tint(color = Color.Gray)
+                                                    )
+                                                }
+                                            }
+
+                                            Spacer(modifier = Modifier.height(5.dp))
+
+                                        }
+                                    }
+                                }
+
+                                Button(
+                                    onClick = {
+                                        addVideoToPlaylists = true.apply {
+                                            showAddPlaylist = false
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        backgroundColor = Color(
+                                            0xFF3392EA
+                                        )
+                                    ),
+                                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(
+                                        text = "Confirm",
+                                        color = Color.White,
+                                        fontFamily = montserrat_bold
+                                    )
+                                }
+
+
+                            }
+                        }
+                    }
+                }
+
+
+            }
+
+
+        }
+
+        // Display Create new playlist
+        AnimatedVisibility(
+            visible = showCreateNewPlaylist,
+            enter = fadeIn(animationSpec = tween(1000)),
+            exit = fadeOut(animationSpec = tween(1000)),
+            modifier = Modifier.align(Alignment.Center)
+        ) {
+
+            var text by remember { mutableStateOf("") } // editable text
+
+            // System back button
+            BackHandler(
+                enabled = true,
+                onBack = { showCreateNewPlaylist = false })
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null
+                    ) {}
+            ) {
+
+                // Back button
+                IconButton(onClick = { showCreateNewPlaylist = false }) {
+                    Image(
+                        // back symbol
+                        painter = painterResource(id = R.drawable.arrow_back_icon),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(35.dp)
+                            .align(Alignment.TopStart),
+                        colorFilter = ColorFilter.tint(color = Color.White),
+                    )
+                }
+
+                Box( // white box
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6, 6, 0, 0))
+                        .background(Color.White)
+                        .fillMaxWidth(0.95f)
+                        .align(Alignment.BottomCenter)
+                        .fillMaxHeight(0.65f)
+                ) {
+                    Column() {
+                        Box( // green box
+                            modifier = Modifier
+                                .background(Color(0xFF24CAAC))
+                                .fillMaxHeight(0.18f)
+                                .fillMaxWidth()
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.CenterStart)
+                                    .padding(start = 20.dp)
+                            ) {
+                                Text( // Title Text
+                                    text = "Create New Playlist",
+                                    fontSize = 23.sp,
+                                    fontFamily = montserrat_bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                        Box(
+                            modifier = Modifier.padding(
+                                start = 20.dp,
+                                top = 10.dp,
+                                end = 20.dp
+                            )
+                        ) {
+                            Column() {
+                                Spacer(modifier = Modifier.height(11.dp))
+                                val customTextSelectionColors =
+                                    TextSelectionColors( // selection text color
+                                        handleColor = Color(0xFF24CAAC),
+                                        backgroundColor = Color(0xFF24CAAC).copy(alpha = 0.4f)
+                                    )
+                                CompositionLocalProvider(LocalTextSelectionColors provides customTextSelectionColors) {
+                                    BasicTextField(
+                                        // textfield
+                                        value = text,
+                                        onValueChange = { newText -> text = newText },
+                                        textStyle = TextStyle(
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color.Black,
+                                            fontFamily = montserrat_light
+                                        ),
+                                        singleLine = true,
+                                        cursorBrush = SolidColor(Color.Black),
+                                        modifier = Modifier
+                                            .fillMaxWidth(1f)
+                                            .height(30.dp),
+                                        decorationBox = { innerTextField ->
+                                            Row {
+                                                if (text.isEmpty()) { // if there is no text
+                                                    Text(
+                                                        // search placeholder
+                                                        text = "Insert Playlist Name",
+                                                        fontSize = 18.sp,
+                                                        fontWeight = FontWeight.Normal,
+                                                        color = Color.Black.copy(alpha = 0.5f),
+                                                        fontFamily = montserrat_light,
+                                                        modifier = Modifier.align(Alignment.CenterVertically),
+                                                    )
+                                                }
+                                                innerTextField()
+                                            }
+                                        },
+                                    )
+                                }
+
+                                Box( // line seperater
+                                    modifier = Modifier
+                                        .background(Color(0xFF828282))
+                                        .fillMaxWidth(1f)
+                                        .height(2.dp)
+                                )
+
+                                Spacer(modifier = Modifier.height(50.dp))
+
+                                if (createPlaylist) {
+                                    LaunchedEffect(true) {
+                                        generateList = false
+                                        FirebaseDatabase.getInstance().getReference("playlists")
+                                            .child("Playlist " + playlistCount).setValue(
+                                                single_playlist(
+                                                    "Playlist " + playlistCount, // path string
+                                                    text, // title of playlist
+                                                    0, // playlist video count
+                                                    mutableListOf<youtubeVideo?>() // list of videos
+                                                ).apply {
+                                                    // Add playlist to the end of the list
+                                                    playlist_List.set(
+                                                        playlist_List.lastIndex, (
+                                                                single_playlist(
+                                                                    "Playlist " + playlistCount, // path string
+                                                                    text, // title of playlist
+                                                                    0, // playlist video count
+                                                                    mutableListOf<youtubeVideo?>() // list of videos
+                                                                )
+                                                                )
+                                                    )
+                                                    // Re-add the "Create New Playlist" button
+                                                    playlist_List.add(
+                                                        single_playlist(
+                                                            "Create New Playlist",
+                                                            "Create New Playlist",
+                                                            0,
+                                                            mutableListOf()
+                                                        )
+                                                    )
+                                                }
+                                            )
+                                    }
+                                    createPlaylist = false
+                                }
+
+                                Button(
+                                    onClick = {
+                                        if (!text.isEmpty()) {
+                                            createPlaylist = true.apply {
+                                                showCreateNewPlaylist = false
+                                            }
+                                        } else
+                                            openNoTitleDialog = true
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        backgroundColor = Color(
+                                            0xFF3392EA
+                                        )
+                                    ),
+                                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(
+                                        text = "Confirm",
+                                        color = Color.White,
+                                        fontFamily = montserrat_bold
+                                    )
+                                }
+
+                            }
+                        }
+                    }
+                }
+
+
+            }
+        }
+
+        // No title dialog
+        if (openNoTitleDialog) {
+            Dialog(
+                properties = DialogProperties(dismissOnClickOutside = true),
+                onDismissRequest = { openNoTitleDialog = false }) {
+                Surface(shape = RoundedCornerShape(size = 12.dp)) {
+                    Row() {
+                        Box(contentAlignment = Alignment.Center) {
+
+                            // white dialog box
+                            Canvas(
+                                modifier = Modifier
+                                    .size(size = 300.dp)
+                                    .clip(RoundedCornerShape(12))
+                                    .align(Alignment.Center)
+                            ) {
+                                drawRect(color = Color.White)
+                            }
+
+                            // dialog text
+                            Box(
+                                modifier = Modifier
+                                    .padding(bottom = 110.dp)
+                                    .size(width = 300.dp, height = 120.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Please enter a name for this playlist",
+                                    fontSize = 22.sp,
+                                    fontFamily = montserrat_bold,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+
+                            // Ok button
+                            Box(contentAlignment = Alignment.Center) {
+                                Button(
+                                    onClick = { openNoTitleDialog = false },
+                                    modifier = Modifier
+                                        .padding(top = 150.dp, start = 0.dp)
+                                        .size(100.dp, 60.dp)
+                                        .clip(RoundedCornerShape(100)),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        backgroundColor = Color(
+                                            0xFF3392EA
+                                        )
+                                    )
+                                ) {
+                                    Text(
+                                        text = "OK",
+                                        fontFamily = montserrat_bold,
+                                        color = Color.White,
+                                        fontSize = 26.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 }
 
 

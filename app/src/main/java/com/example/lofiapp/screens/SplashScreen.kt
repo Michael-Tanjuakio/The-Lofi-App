@@ -56,7 +56,7 @@ data class youtubeVideo(
 data class single_playlist(
     val playlistID: String = "",
     val playlistTitle: String = "",
-    val playlistCount: Int = 0,
+    var playlistCount: Int = 0,
     val videoList : MutableList<youtubeVideo?> = mutableListOf()
 )  {}
 
@@ -143,7 +143,8 @@ fun SplashScreen(navController: NavController) {
                 "Create New Playlist",
                 "Create New Playlist",
                 0,
-                mutableListOf())
+                mutableListOf()
+            )
         )
         videos.child("video1").setValue(
             youtubeVideo(

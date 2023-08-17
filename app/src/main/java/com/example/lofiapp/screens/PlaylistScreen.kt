@@ -120,7 +120,8 @@ fun PlaylistScreen(
         "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
 
     // Make default empty playlist
-    var playlist by remember { mutableStateOf(single_playlist())}
+    var playlist by remember { mutableStateOf(single_playlist()) }
+    var getPlaylist by remember { mutableStateOf(true) }
 
     // Retrieve list in database
     LaunchedEffect(true) {
@@ -128,8 +129,12 @@ fun PlaylistScreen(
             .child(playlist_path)
             .addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    playlist = dataSnapshot.getValue<single_playlist>()!!
+                    if(getPlaylist)
+                        playlist = dataSnapshot.getValue<single_playlist?>()!!.apply {
+                            getPlaylist = false
+                        }
                 }
+
                 override fun onCancelled(error: DatabaseError) {}
             })
     }
@@ -254,38 +259,44 @@ fun PlaylistScreen(
                                     .padding(start = 0.dp, bottom = 10.dp)
                                     .clip(RoundedCornerShape(12, 12, 5, 5))
                                     .clickable {
-                                        navController.navigate(
-                                            "video_screen/" +
-                                                    video_id +
-                                                    "/" +
-                                                    URLEncoder.encode( // encode to pass "&" character
-                                                        "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
-                                                        StandardCharsets.UTF_8.toString()
-                                                    )
-                                        )
+                                        if (item != null) {
+                                            navController.navigate(
+                                                "video_screen/" +
+                                                        video_id +
+                                                        "/" +
+                                                        URLEncoder.encode( // encode to pass "&" character
+                                                            item.videoID,
+                                                            StandardCharsets.UTF_8.toString()
+                                                        )
+                                            )
+                                        }
                                     }
                             ) { // Video Display
-                                AsyncImage( // Video thumbnail
-                                    model = fullsize_path_img,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .size(width = 140.dp, height = 87.dp)
-                                        .clip(RoundedCornerShape(12))
-                                        .align(CenterVertically)
-                                )
-                                Text( // Video name
-                                    text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
-                                    maxLines = 4,
-                                    modifier = Modifier
-                                        .padding(start = 8.dp)
-                                        .width(130.dp)
-                                        .height(80.dp)
-                                        .align(CenterVertically),
-                                    //.border(border = BorderStroke(2.dp, Color.Red)),
-                                    fontSize = 13.sp,
-                                    fontFamily = montserrat_light
-                                )
+                                if (item != null) {
+                                    AsyncImage( // Video thumbnail
+                                        model = "https://img.youtube.com/vi/" + item.videoID + "/maxres2.jpg",
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(width = 140.dp, height = 87.dp)
+                                            .clip(RoundedCornerShape(12))
+                                            .align(CenterVertically)
+                                    )
+                                }
+                                if (item != null) {
+                                    Text( // Video name
+                                        text = item.videoTitle,
+                                        maxLines = 4,
+                                        modifier = Modifier
+                                            .padding(start = 8.dp)
+                                            .width(130.dp)
+                                            .height(80.dp)
+                                            .align(CenterVertically),
+                                        //.border(border = BorderStroke(2.dp, Color.Red)),
+                                        fontSize = 13.sp,
+                                        fontFamily = montserrat_light
+                                    )
+                                }
                             }
                         }
                     }
@@ -401,7 +412,12 @@ fun PlaylistScreen(
 
                         // yes button
                         Button(
-                            onClick = { navController.navigate(ScreenRoutes.HomeScreen.route) },
+                            onClick = {
+                                getPlaylist = false
+                                FirebaseDatabase.getInstance().getReference("playlists")
+                                    .child(playlist_path).removeValue()
+                                navController.navigate(ScreenRoutes.HomeScreen.route)
+                            },
                             modifier = Modifier
                                 .padding(top = 150.dp, end = 150.dp)
                                 .size(100.dp, 60.dp)
@@ -448,8 +464,3 @@ fun PlaylistScreen(
         }
     }
 }
-
-
-
-
-

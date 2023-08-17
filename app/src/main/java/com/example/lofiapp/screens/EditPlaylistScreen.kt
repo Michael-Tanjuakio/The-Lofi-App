@@ -82,6 +82,7 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ktx.getValue
+import okhttp3.internal.toImmutableList
 import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.detectReorderAfterLongPress
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
@@ -115,6 +116,12 @@ fun EditPlaylistScreen(
         navController.previousBackStackEntry
             ?.savedStateHandle
             ?.set("new_bottomBar_title", bottomBar_title)
+        navController.previousBackStackEntry
+            ?.savedStateHandle
+            ?.set("new_playlist", false)
+        navController.previousBackStackEntry
+            ?.savedStateHandle
+            ?.set("playlist_id", rewrite.playlistID)
 
         // navigate back
         navController
@@ -147,26 +154,23 @@ fun EditPlaylistScreen(
     // Editable playlist title
     var text by remember { mutableStateOf(playlist.playlistTitle) }
 
+    var getPlaylist by remember { mutableStateOf(true) }
+
     // Retrieve list in database
     LaunchedEffect(true) {
         FirebaseDatabase.getInstance().getReference("playlists")
             .child(playlist_path)
             .addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    playlist = dataSnapshot.getValue<single_playlist>()!!
-                    text = playlist.playlistTitle
+                    if(getPlaylist) {
+                        playlist = dataSnapshot.getValue<single_playlist>()!!
+                        text = playlist.playlistTitle
+                    }
                 }
 
                 override fun onCancelled(error: DatabaseError) {}
             })
     }
-
-    Log.d(
-        "new_bp",
-        "opening playlist = " + playlist_path +
-                "\nplaylist id = " + playlist.playlistID +
-                "\nplaylist title = " + playlist.playlistTitle
-    )
 
     // Popups
     var openDialog by remember { mutableStateOf(false) } // delete dialog popup
@@ -174,6 +178,17 @@ fun EditPlaylistScreen(
     var openDeleteVideoDialog by remember { mutableStateOf(false) } // delete video dialog popup
     var deleteVideo by remember { mutableStateOf(false) } // delete video dialog popup
     var index by remember { mutableStateOf(0) } // delete video dialog popup
+
+    // Get playlist of videos
+    val videos = listOf(playlist.videoList)
+    val list = remember { mutableStateOf(List(playlist.videoList.size) {playlist.videoList}) }
+
+    Log.d(
+        "new_bp",
+        "editable list = " + mutableStateOf(List(playlist.videoList.size) {playlist.videoList}) +
+                "\n needs to have " + videos
+    )
+
 
     // System Back handler
     BackHandler(true, onBack = {
@@ -190,9 +205,6 @@ fun EditPlaylistScreen(
             openNoTitleDialog = true
     })
 
-    // Get playlist of videos
-    val list = remember { mutableStateOf(listOf(playlist.videoList)) }
-
     // Reorderable Lazy List State
     val state = rememberReorderableLazyListState(onMove = { from, to ->
         list.value = list.value.toMutableList().apply {
@@ -204,9 +216,6 @@ fun EditPlaylistScreen(
     val video_id = "jfKfPfyJRdk" // video-id example
     val fullsize_path_img =
         "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
-
-
-
 
     Scaffold(
         topBar = {
@@ -320,6 +329,13 @@ fun EditPlaylistScreen(
                     ReorderableItem(state, key = item) { isDragging ->
                         val elevation = animateDpAsState(if (isDragging) 16.dp else 0.dp)
 
+
+                            Log.d(
+                                "new_bp",
+                                "passing: display video = " + item
+                            )
+
+
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -345,29 +361,32 @@ fun EditPlaylistScreen(
                                             .align(CenterVertically)
                                             .padding(end = 10.dp)
                                     )
-                                    AsyncImage( // Video thumbnail
-                                        model = fullsize_path_img,
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .size(width = 140.dp, height = 87.dp)
-                                            .clip(RoundedCornerShape(12))
-                                            .align(CenterVertically)
-                                            .background(Color.Transparent)
-                                    )
-                                    Text( // Video name
-                                        //  "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
-                                        text = "video " + item,
-                                        maxLines = 4,
-                                        modifier = Modifier
-                                            .padding(start = 8.dp)
-                                            .width(90.dp)
-                                            .height(80.dp)
-                                            .align(CenterVertically),
-                                        //.border(border = BorderStroke(2.dp, Color.Red)),
-                                        fontSize = 13.sp,
-                                        fontFamily = montserrat_light
-                                    )
+                                    if (item != null) {
+                                        AsyncImage( // Video thumbnail
+                                            model = "https://img.youtube.com/vi/" + item + "/maxres2.jpg",
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .size(width = 140.dp, height = 87.dp)
+                                                .clip(RoundedCornerShape(12))
+                                                .align(CenterVertically)
+                                                .background(Color.Transparent)
+                                        )
+                                    }
+                                    if (item != null) {
+                                        Text( // Video name
+                                            text = item.toString(),
+                                            maxLines = 4,
+                                            modifier = Modifier
+                                                .padding(start = 8.dp)
+                                                .width(90.dp)
+                                                .height(80.dp)
+                                                .align(CenterVertically),
+                                            //.border(border = BorderStroke(2.dp, Color.Red)),
+                                            fontSize = 13.sp,
+                                            fontFamily = montserrat_light
+                                        )
+                                    }
                                     // delete video button
                                     Image(
                                         painter = painterResource(id = R.drawable.delete_video_icon),
@@ -518,7 +537,12 @@ fun EditPlaylistScreen(
 
                         // yes button
                         Button(
-                            onClick = { navController.navigate(ScreenRoutes.HomeScreen.route) },
+                            onClick = {
+                                getPlaylist = false
+                                FirebaseDatabase.getInstance().getReference("playlists")
+                                    .child(playlist_path).removeValue()
+                                navController.navigate(ScreenRoutes.HomeScreen.route)
+                            },
                             modifier = Modifier
                                 .padding(top = 150.dp, end = 150.dp)
                                 .size(100.dp, 60.dp)
