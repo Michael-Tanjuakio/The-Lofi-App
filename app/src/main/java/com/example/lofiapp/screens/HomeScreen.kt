@@ -139,7 +139,7 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
     // App list display
     val recList by remember { mutableStateOf(mutableListOf<youtubeVideo?>()) }
     val playlist_List = remember { mutableStateListOf<single_playlist?>() }
-    val addPlaylist_List = remember { mutableStateListOf<String>() }
+    val addPlaylist_List = remember { mutableStateListOf<single_playlist?>() }
 
     // Popups
     var showAddPlaylist by remember { mutableStateOf(false) }
@@ -187,11 +187,12 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
     LaunchedEffect(key1 = true) {
         playlists.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(dataSnapshot: DataSnapshot) {
-                for (childSnapshot in dataSnapshot.children) {
-                    if (generateList) {
+                if (generateList && !addVideoToPlaylists) {
+                    for (childSnapshot in dataSnapshot.children) {
                         playlist_List.add(childSnapshot.getValue<single_playlist?>())
                         playlistCount = dataSnapshot.childrenCount.toInt()
                     }
+                    generateList = false
                 }
 
             }
@@ -360,12 +361,11 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                 ) {
                                     // Add to playlist button
                                     Image(
-                                        painter = painterResource(id = R.drawable.add_new_icon),
+                                        painter = painterResource(id = R.drawable.add_new_icon_2),
                                         contentDescription = null,
                                         colorFilter = ColorFilter.tint(color = Color.Black),
                                         modifier = Modifier
                                             .size(35.dp)
-                                            .border(2.dp, Color.Red)
                                             .clickable {
                                                 if (it != null) {
                                                     addVideo = it
@@ -405,7 +405,8 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                 modifier = Modifier
                                     .padding(start = 16.dp)
                                     .clip(RoundedCornerShape(12, 12, 5, 5))
-                                    .clickable {
+                                    .clickable { // Click to go to playlist
+                                        // Go to selected playlist
                                         if (!item?.playlistTitle.equals("Create New Playlist"))
                                             navController.navigate(
                                                 "playlist_screen" +
@@ -418,6 +419,7 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                                             StandardCharsets.UTF_8.toString()
                                                         )
                                             )
+                                        // Create New Playlist
                                         else
                                             navController.navigate(
                                                 "playlist_screen" +
@@ -450,7 +452,9 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                     // Playlist with videos button
                                     if (item?.playlistCount!! > 0) {
                                         AsyncImage( // Video Thumbnail
-                                            model = "https://img.youtube.com/vi/" + item?.videoList?.get(0)?.videoID.toString() + "/maxres2.jpg",
+                                            model = "https://img.youtube.com/vi/" + item?.videoList?.get(
+                                                0
+                                            )?.videoID.toString() + "/maxres2.jpg",
                                             contentDescription = null,
                                             contentScale = ContentScale.Crop,
                                             modifier = Modifier
@@ -613,7 +617,7 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
         modifier = Modifier.fillMaxSize()
     ) {
 
-        // Display add playlist
+        // Display add playlist popup
         AnimatedVisibility(
             visible = showAddPlaylist,
             enter = fadeIn(animationSpec = tween(1000)),
@@ -626,6 +630,7 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                 enabled = true,
                 onBack = { showAddPlaylist = false })
 
+            // Shadowed Background
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -669,7 +674,7 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                     .align(Alignment.CenterStart)
                                     .padding(start = 20.dp)
                             ) {
-                                Text( // Title Text
+                                Text( // Title Text in green box
                                     text = "Add to Playlist",
                                     fontSize = 23.sp,
                                     fontFamily = montserrat_bold,
@@ -705,7 +710,7 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                         modifier = Modifier
                                             .size(35.dp)
                                             .align(Alignment.CenterVertically)
-                                            .clickable(onClick = {
+                                            .clickable(onClick = { // Open create new playlist popup
                                                 showCreateNewPlaylist = true
                                             }),
                                         colorFilter = ColorFilter.tint(color = Color.Gray)
@@ -727,41 +732,20 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                     LazyColumn() {
                                         itemsIndexed(playlist_List) { index, item ->
 
-                                            // Update playlist(s)
-                                            if (addVideoToPlaylists) {
-                                                var playlist = item
-                                                if (playlist != null) {
-                                                    playlist.videoList.add(addVideo)
-                                                }
-                                                addPlaylist_List.forEach() { it ->
-                                                    if (playlist != null) {
-                                                        playlists.child(it).setValue(
-                                                            single_playlist(
-                                                                playlist.playlistID,
-                                                                playlist.playlistTitle,
-                                                                ++playlist.playlistCount,
-                                                                playlist.videoList
-                                                            )
-                                                        )
-                                                    }
-                                                }
-                                                addVideoToPlaylists = false
-                                            }
-
                                             // Checkbox icon
                                             var checkBoxIcon by remember { mutableStateOf(false) }
 
                                             Row(modifier = Modifier.clickable() {
-                                                // Change the icon
-                                                checkBoxIcon = !checkBoxIcon
-
-                                                // add to list
-                                                if (item != null && checkBoxIcon) {
-                                                    addPlaylist_List.add(item.playlistID)
-                                                }
+                                                // Checkbox:
+                                                checkBoxIcon = !checkBoxIcon  // Change the icon
+                                                if (item != null && checkBoxIcon)
+                                                    addPlaylist_List.add(item) // add to list
+                                                else
+                                                    addPlaylist_List.remove(item) // remove to list if unchecked
 
                                             }) {
 
+                                                // Display all playlists (except Create New Playlist button)
                                                 if (item != null && !(item.playlistTitle.equals("Create New Playlist"))) {
                                                     Text( // Playlist Title
                                                         text = item.playlistTitle,
@@ -787,12 +771,21 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                                             .size(35.dp)
                                                             .align(Alignment.CenterVertically)
                                                             .clickable() {
-                                                                // Change the icon
-                                                                checkBoxIcon = !checkBoxIcon
-
-                                                                // add to list
+                                                                // Checkbox:
+                                                                checkBoxIcon =
+                                                                    !checkBoxIcon  // Change the icon
                                                                 if (item != null && checkBoxIcon) {
-                                                                    addPlaylist_List.add(item.playlistID)
+                                                                    addPlaylist_List.add(item) // add to list
+                                                                    Log.d(
+                                                                        "new_bp",
+                                                                        "adding: " + item.playlistTitle
+                                                                    )
+                                                                } else {
+                                                                    addPlaylist_List.remove(item) // remove to list if unchecked
+                                                                    Log.d(
+                                                                        "new_bp",
+                                                                        "removing: " + item.playlistTitle
+                                                                    )
                                                                 }
                                                             },
                                                         colorFilter = ColorFilter.tint(color = Color.Gray)
@@ -804,6 +797,29 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
 
                                         }
                                     }
+                                }
+
+                                // Update playlist(s)
+                                if (addVideoToPlaylists) {
+                                    addPlaylist_List.forEach() { playlist ->
+                                        if (playlist != null) {
+                                            Log.d(
+                                                "new_bp",
+                                                "adding: " + addVideo.videoTitle + " to " + playlist.playlistTitle
+                                            )
+                                            val videoList_ = ArrayList(playlist.videoList)
+                                            videoList_.add(addVideo)
+                                            playlists.child(playlist.playlistID).setValue(
+                                                single_playlist(
+                                                    playlist.playlistID,
+                                                    playlist.playlistTitle,
+                                                    ++playlist.playlistCount,
+                                                    videoList_
+                                                )
+                                            )
+                                        }
+                                    }
+                                    addVideoToPlaylists = false
                                 }
 
                                 Button(
@@ -971,7 +987,7 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                                     "Playlist " + playlistCount, // path string
                                                     text, // title of playlist
                                                     0, // playlist video count
-                                                    mutableListOf<youtubeVideo?>() // list of videos
+                                                    listOf<youtubeVideo>() // list of videos
                                                 ).apply {
                                                     // Add playlist to the end of the list
                                                     playlist_List.set(
@@ -980,7 +996,7 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                                                     "Playlist " + playlistCount, // path string
                                                                     text, // title of playlist
                                                                     0, // playlist video count
-                                                                    mutableListOf<youtubeVideo?>() // list of videos
+                                                                    listOf<youtubeVideo>() // list of videos
                                                                 )
                                                                 )
                                                     )

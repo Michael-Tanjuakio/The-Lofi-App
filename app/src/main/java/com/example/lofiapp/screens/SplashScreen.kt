@@ -57,13 +57,11 @@ data class single_playlist(
     val playlistID: String = "",
     val playlistTitle: String = "",
     var playlistCount: Int = 0,
-    val videoList : MutableList<youtubeVideo?> = mutableListOf()
+    val videoList : List<youtubeVideo> = listOf()
 )  {}
 
 @Composable
 fun SplashScreen(navController: NavController) {
-
-
 
     val animationDelay = 1500
     Box(

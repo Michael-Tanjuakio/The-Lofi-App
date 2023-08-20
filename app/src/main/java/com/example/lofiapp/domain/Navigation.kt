@@ -221,7 +221,7 @@ fun Navigation() {
                                 "Playlist " + i, // path string
                                 "New Playlist " + i, // title of playlist
                                 0, // playlist video count
-                                mutableListOf<youtubeVideo?>() // list of videos
+                                mutableListOf<youtubeVideo>() // list of videos
                             )
                         )
                 }
@@ -274,12 +274,18 @@ fun Navigation() {
                     entry.savedStateHandle.get<String>("new_bottomBar_title").toString()
             }
 
+            // Get the playlist
+            var addVideo by remember { mutableStateOf(single_playlist()) }
+            LaunchedEffect(true) {
+            }
+
+
             // Go to edit playlist screen
             EditPlaylistScreen(
                 navController = navController,
                 playlist_path = entry.arguments?.getString("playlist_path").toString(),
                 bottomBar_pic,
-                bottomBar_title
+                bottomBar_title,
             )
         }
     }
