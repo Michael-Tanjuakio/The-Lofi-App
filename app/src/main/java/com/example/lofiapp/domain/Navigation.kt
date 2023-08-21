@@ -249,6 +249,7 @@ fun Navigation() {
         }
 
         // edit playlist screen
+        // send list to edit playlist screen to make this work
         composable(
             route = "edit_playlist_screen" +
                     "/{playlist_path}" +
@@ -275,18 +276,35 @@ fun Navigation() {
             }
 
             // Get the playlist
-            var addVideo by remember { mutableStateOf(single_playlist()) }
+            var playlist by remember { mutableStateOf(single_playlist()) }
+            var getPlaylist by remember { mutableStateOf(true) }
             LaunchedEffect(true) {
+                FirebaseDatabase.getInstance().getReference("playlists")
+                    .child(entry.arguments?.getString("playlist_path").toString())
+                    .addValueEventListener(object : ValueEventListener {
+                        override fun onDataChange(dataSnapshot: DataSnapshot) {
+                            if (getPlaylist) {
+                                playlist = (dataSnapshot.getValue<single_playlist>()!!)
+                                getPlaylist = false
+                            }
+                        }
+
+                        override fun onCancelled(error: DatabaseError) {}
+                    })
+                FirebaseDatabase.getInstance().getReference("playlists")
+                    .child(entry.arguments?.getString("playlist_path").toString()).get()
             }
 
 
             // Go to edit playlist screen
-            EditPlaylistScreen(
-                navController = navController,
-                playlist_path = entry.arguments?.getString("playlist_path").toString(),
-                bottomBar_pic,
-                bottomBar_title,
-            )
+            if (!playlist.playlistID.isEmpty())
+                EditPlaylistScreen(
+                    navController = navController,
+                    playlist_path = entry.arguments?.getString("playlist_path").toString(),
+                    bottomBar_pic,
+                    bottomBar_title,
+                    playlist
+                )
         }
     }
 }

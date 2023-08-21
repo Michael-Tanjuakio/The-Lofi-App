@@ -1,5 +1,6 @@
 package com.example.lofiapp.screens
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.util.Log
@@ -94,13 +95,15 @@ import java.util.Collections
 import java.util.Collections.list
 
 
+@SuppressLint("SuspiciousIndentation")
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EditPlaylistScreen(
     navController: NavController,
     playlist_path: String,
     bottomBar_pic: String,
-    bottomBar_title: String
+    bottomBar_title: String,
+    playlist: single_playlist
 ) {
 
     // Navigate back function
@@ -149,28 +152,11 @@ fun EditPlaylistScreen(
     }
 
     // Make default empty playlist
-    var playlist by remember { mutableStateOf(single_playlist()) }
 
     // Editable playlist title
     var text by remember { mutableStateOf(playlist.playlistTitle) }
 
-    var getPlaylist by remember { mutableStateOf(true) }
-
-    // Retrieve list in database
-    LaunchedEffect(true) {
-        FirebaseDatabase.getInstance().getReference("playlists")
-            .child(playlist_path)
-            .addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    if(getPlaylist) {
-                        playlist = dataSnapshot.getValue<single_playlist>()!!
-                        text = playlist.playlistTitle
-                    }
-                }
-
-                override fun onCancelled(error: DatabaseError) {}
-            })
-    }
+    var new_playlist by remember { mutableStateOf(listOf<youtubeVideo>()) }
 
     // Popups
     var openDialog by remember { mutableStateOf(false) } // delete dialog popup
@@ -180,13 +166,15 @@ fun EditPlaylistScreen(
     var index by remember { mutableStateOf(0) } // delete video dialog popup
 
     // Get playlist of videos
-    val videos = listOf(playlist.videoList)
-    val list = remember { mutableStateOf(List(playlist.videoList.size) {playlist.videoList}) }
+    val list = remember {
+        mutableStateOf(
+            playlist.videoList
+        )
+    }
 
     Log.d(
         "new_bp",
-        "editable list = " + mutableStateOf(List(playlist.videoList.size) {playlist.videoList}) +
-                "\n needs to have " + videos
+        "editable list = " + list
     )
 
 
@@ -197,8 +185,8 @@ fun EditPlaylistScreen(
                 single_playlist(
                     playlist.playlistID,
                     text,
-                    playlist.playlistCount,
-                    playlist.videoList
+                    new_playlist.size,
+                    new_playlist
                 )
             )
         else
@@ -211,11 +199,6 @@ fun EditPlaylistScreen(
             add(to.index, removeAt(from.index))
         }
     })
-
-    // Leftover testing data
-    val video_id = "jfKfPfyJRdk" // video-id example
-    val fullsize_path_img =
-        "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
 
     Scaffold(
         topBar = {
@@ -325,20 +308,19 @@ fun EditPlaylistScreen(
                     .detectReorderAfterLongPress(state),
                 state = state.listState,
             ) {
-                items(list.value, { it }) { item ->
+                items(list.value, itemContent = { item ->
                     ReorderableItem(state, key = item) { isDragging ->
+                        new_playlist = list.value.subList(0,list.value.size)
                         val elevation = animateDpAsState(if (isDragging) 16.dp else 0.dp)
-
-
                             Log.d(
                                 "new_bp",
                                 "passing: display video = " + item
                             )
 
-
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
+                                .shadow(elevation.value)
                         ) {
                             Box(
                                 modifier = Modifier
@@ -363,7 +345,7 @@ fun EditPlaylistScreen(
                                     )
                                     if (item != null) {
                                         AsyncImage( // Video thumbnail
-                                            model = "https://img.youtube.com/vi/" + item + "/maxres2.jpg",
+                                            model = "https://img.youtube.com/vi/" + item.videoID + "/maxres2.jpg",
                                             contentDescription = null,
                                             contentScale = ContentScale.Crop,
                                             modifier = Modifier
@@ -375,7 +357,7 @@ fun EditPlaylistScreen(
                                     }
                                     if (item != null) {
                                         Text( // Video name
-                                            text = item.toString(),
+                                            text = item.videoTitle,
                                             maxLines = 4,
                                             modifier = Modifier
                                                 .padding(start = 8.dp)
@@ -427,7 +409,7 @@ fun EditPlaylistScreen(
                             }
                         }
                     }
-                }
+                })
             }
         },
         bottomBar = {
@@ -538,7 +520,6 @@ fun EditPlaylistScreen(
                         // yes button
                         Button(
                             onClick = {
-                                getPlaylist = false
                                 FirebaseDatabase.getInstance().getReference("playlists")
                                     .child(playlist_path).removeValue()
                                 navController.navigate(ScreenRoutes.HomeScreen.route)

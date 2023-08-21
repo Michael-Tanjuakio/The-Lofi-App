@@ -194,7 +194,6 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                     }
                     generateList = false
                 }
-
             }
 
             override fun onCancelled(error: DatabaseError) {}
