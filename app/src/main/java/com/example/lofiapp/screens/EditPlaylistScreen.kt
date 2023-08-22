@@ -236,8 +236,8 @@ fun EditPlaylistScreen(
                                 single_playlist(
                                     playlist.playlistID,
                                     text,
-                                    playlist.playlistCount,
-                                    playlist.videoList
+                                    new_playlist.size,
+                                    new_playlist
                                 )
                             )
                         else
