@@ -87,33 +87,29 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.options.IFram
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.utils.YouTubePlayerTracker
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 import kotlinx.coroutines.delay
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import kotlin.time.Duration.Companion.seconds
 
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun VideoScreen(navController: NavController, bottomBar_pic: String, bottomBar_title: String) {
+fun VideoScreen(
+    navController: NavController,
+    bottomBar_pic: String,
+    bottomBar_title: String,
+    playlist: single_playlist,
+    playlist_index: String
+) {
 
-    // placeholder variables
-    val list = listOf("1", "1", "1", "1", "1", "1", "1", "1") // placeholder
-    val playlistsList = listOf(
-        "laura's playlist",
-        "michael's playlist",
-        "chris soundtrack",
-        "jonathan album",
-        "laura's playlist",
-        "michael's playlist",
-        "chris soundtrack",
-        "jonathan album"
+    Log.d("new_bp",
+        "playlist = " + playlist.playlistTitle +
+                "\nplaylist_index = " + playlist_index +
+                "\nplaylist size = " + playlist.videoList.size
     )
-    //val video_id = "jfKfPfyJRdk" // video-id example
-    val fullsize_path_img =
-        "https://img.youtube.com/vi/$bottomBar_pic/maxresdefault.jpg" // thumbnail link example
+
+    // Popups
     var showControls by remember { mutableStateOf(true) }
-    var showQueueH by remember { mutableStateOf(false) }
-    var showQueueV by remember { mutableStateOf(false) }
-    var showAddPlaylist by remember { mutableStateOf(false) }
-    var showCreateNewPlaylist by remember { mutableStateOf(false) }
     var openNoTitleDialog by remember { mutableStateOf(false) } // no title dialog popup
     val context = LocalContext.current
     val activity = remember { context as Activity }
@@ -123,7 +119,6 @@ fun VideoScreen(navController: NavController, bottomBar_pic: String, bottomBar_t
     var execute by remember { mutableStateOf(true) }
     var dialogue by remember { mutableStateOf(false) }
     var lockOrientation by remember { mutableStateOf(true) }
-    val configuration = LocalConfiguration.current
 
     // System bar colors
     val systemUiController = rememberSystemUiController()
@@ -144,8 +139,20 @@ fun VideoScreen(navController: NavController, bottomBar_pic: String, bottomBar_t
             ?.set("new_bottomBar_title", bottomBar_title)
 
         // navigate back
-        navController
-            .popBackStack()
+        if ((playlist_index.equals("-1"))) // home/search screen
+            navController.popBackStack()
+        else // playlist screen
+            navController.navigate(
+                "playlist_screen" +
+                        "/" + playlist.playlistID +
+                        "?new_playlist=" + false +
+                        "&bottomBar_pic=" + bottomBar_pic +
+                        "&bottomBar_title=" +
+                        URLEncoder.encode(
+                            bottomBar_title,
+                            StandardCharsets.UTF_8.toString()
+                        )
+            )
     }
 
     // System Back handler
@@ -190,7 +197,18 @@ fun VideoScreen(navController: NavController, bottomBar_pic: String, bottomBar_t
 
                         if (skipNext)
                             LaunchedEffect(skipNext) {// avoids crash
-                                navController.navigate("VideoScreen/JStAYvbeSHc") // fix this later
+                                if (!(playlist_index.toInt() == playlist.videoList.size - 1))
+                                    navController.navigate(
+                                        "video_screen"
+                                                + "?bottomBar_pic=" + playlist.videoList[playlist_index.toInt()+1].videoID
+                                                + "&bottomBar_title=" +
+                                                URLEncoder.encode( // encode to pass "&" and "/" characters
+                                                    playlist.videoList[playlist_index.toInt()+1].videoTitle,
+                                                    StandardCharsets.UTF_8.toString()
+                                                )
+                                                + "&playlist_id=" + playlist.playlistID
+                                                + "&playlist_index=" + (playlist_index.toInt() + 1)
+                                    )
                             }
 
 
@@ -218,8 +236,7 @@ fun VideoScreen(navController: NavController, bottomBar_pic: String, bottomBar_t
 
                 Box( // control buttons
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight()
+                        .fillMaxSize()
                 ) {
 
                     // Back button
@@ -236,7 +253,7 @@ fun VideoScreen(navController: NavController, bottomBar_pic: String, bottomBar_t
                             colorFilter = ColorFilter.tint(color = Color.White),
                         )
                     }
-                    Row(modifier = Modifier.align(Alignment.BottomCenter)) {
+                    Row(modifier = Modifier.align(Alignment.TopEnd)) {
                         // rotation buttons
                         if (lockOrientation) { // locked orientation button
 
@@ -283,581 +300,66 @@ fun VideoScreen(navController: NavController, bottomBar_pic: String, bottomBar_t
                                 colorFilter = ColorFilter.tint(color = Color.White),
                             )
                         }
-
-                        // Add Playlist button
-                        IconButton(
-                            onClick = {
-                                dialogue = true
-                                showAddPlaylist = true.apply {
-                                    showControls = false
-                                    dialogue = true
-                                }
-                            },
-                            modifier = Modifier
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.playlist_add_icon),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(35.dp),
-                                colorFilter = ColorFilter.tint(color = Color.White),
-                            )
-                        }
-
-                        // queue button
-                        IconButton(
-                            onClick = {
-                                when (configuration.orientation) {
-                                    Configuration.ORIENTATION_LANDSCAPE -> {
-                                        showQueueH = true.apply {
-                                            showControls = false
-                                            dialogue = true
-                                        }
-                                    }
-
-                                    Configuration.ORIENTATION_PORTRAIT -> {
-                                        showQueueV = true.apply {
-                                            showControls = false
-                                            dialogue = true
-                                        }
-                                    }
-                                }
-                            },
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.queue_icon),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(35.dp),
-                                colorFilter = ColorFilter.tint(color = Color.White),
-                            )
-                        }
                     }
 
-                    // Play previous button
-                    IconButton(
-                        onClick = {
-                            navController.navigate("VideoScreen/k3y520IRXZ4")
-                        },
-                        modifier = Modifier.align(Alignment.BottomStart)
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.skip_previous_icon),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(35.dp),
-                            colorFilter = ColorFilter.tint(color = Color.White),
-                        )
-                    }
+                    if(!(playlist_index.toInt() == -1)) {
 
-                    // Play next button
-                    IconButton(
-                        onClick = {
-                            navController.navigate("VideoScreen/JStAYvbeSHc")
-                        },
-                        modifier = Modifier.align(Alignment.BottomEnd)
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.skip_next_icon),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(35.dp),
-                            colorFilter = ColorFilter.tint(color = Color.White),
-                        )
-                    }
-
-                }
-            }
-
-
-            // Display queue (horizontal)
-            AnimatedVisibility(
-                visible = showQueueH,
-                enter = fadeIn(animationSpec = tween(1000)),
-                exit = fadeOut(animationSpec = tween(1000)),
-                modifier = Modifier.align(Alignment.Center)
-            ) {
-
-                activity.requestedOrientation =
-                    ActivityInfo.SCREEN_ORIENTATION_LOCKED // disable rotation
-
-                // System back button
-                BackHandler(
-                    enabled = true,
-                    onBack = { showQueueH = false.apply { dialogue = false } }
-                )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.6f))
-                        .clickable(
-                            interactionSource = interactionSource,
-                            indication = null
-                        ) {}
-                ) {
-
-                    // Back button
-                    IconButton(onClick = { showQueueH = false.apply { dialogue = false } }) {
-                        Image(
-                            // back symbol
-                            painter = painterResource(id = R.drawable.arrow_back_icon),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(35.dp)
-                                .align(Alignment.TopStart),
-                            colorFilter = ColorFilter.tint(color = Color.White),
-                        )
-                    }
-
-                    // Queue display
-                    LazyRow(
-                        modifier = Modifier
-                            .padding(start = 13.dp, top = 6.dp)
-                            .align(Alignment.Center)
-                    ) {
-                        items(items = list, itemContent = { item ->
-                            Column(modifier = Modifier
-                                .padding(start = 16.dp)
-                                .clip(RoundedCornerShape(12, 12, 5, 5))
-                                .clickable {
-                                    navController.navigate("VideoScreen/k3y520IRXZ4") // link to video
-                                }
-                            ) { // Video Display
-                                AsyncImage( // Video thumbnail
-                                    model = fullsize_path_img,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .size(width = 220.dp, height = 134.dp)
-                                        .clip(RoundedCornerShape(12))
-                                )
-                                Text( // Video name
-                                    text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
-                                    maxLines = 2,
-                                    modifier = Modifier
-                                        .width(220.dp)
-                                        .height(IntrinsicSize.Max),
-                                    fontSize = 16.sp,
-                                    fontFamily = montserrat_light,
-                                    color = Color.White
-                                )
-                            }
-                        })
-                    }
-                }
-            }
-
-            // Display queue (vertical)
-            AnimatedVisibility(
-                visible = showQueueV,
-                enter = fadeIn(animationSpec = tween(1000)),
-                exit = fadeOut(animationSpec = tween(1000)),
-                modifier = Modifier.align(Alignment.Center)
-            ) {
-
-                activity.requestedOrientation =
-                    ActivityInfo.SCREEN_ORIENTATION_LOCKED // disable rotation
-
-                // System back button
-                BackHandler(
-                    enabled = true,
-                    onBack = { showQueueV = false.apply { dialogue = false } }
-                )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.6f))
-                        .clickable(
-                            interactionSource = interactionSource,
-                            indication = null
-                        ) {}
-                ) {
-
-                    Column() {
-
-                        // Back button
-                        Box(modifier = Modifier.fillMaxWidth()) {
-                            IconButton(onClick = {
-                                showQueueV = false.apply { dialogue = false }
-                            }) {
+                        // Play previous button
+                        if (!(playlist_index.equals("0"))) {
+                            IconButton(
+                                onClick = {
+                                    navController.navigate(
+                                        "video_screen"
+                                                + "?bottomBar_pic=" + playlist.videoList[playlist_index.toInt()-1].videoID
+                                                + "&bottomBar_title=" +
+                                                URLEncoder.encode( // encode to pass "&" and "/" characters
+                                                    playlist.videoList[playlist_index.toInt()-1].videoTitle,
+                                                    StandardCharsets.UTF_8.toString()
+                                                )
+                                                + "&playlist_id=" + playlist.playlistID
+                                                + "&playlist_index=" + (playlist_index.toInt() - 1)
+                                    )
+                                },
+                                modifier = Modifier.align(Alignment.BottomStart)
+                            ) {
                                 Image(
-                                    // back symbol
-                                    painter = painterResource(id = R.drawable.arrow_back_icon),
+                                    painter = painterResource(id = R.drawable.skip_previous_icon),
                                     contentDescription = null,
                                     modifier = Modifier
-                                        .size(35.dp)
-                                        .align(Alignment.TopStart),
+                                        .size(35.dp),
                                     colorFilter = ColorFilter.tint(color = Color.White),
                                 )
                             }
                         }
 
-                        // Queue Display
-                        LazyColumn(
-                            modifier = Modifier
-                                .padding(start = 0.dp, top = 5.dp)
-                                .align(Alignment.CenterHorizontally)
+                        // Play next button
+                        if (!(playlist_index.toInt() == playlist.videoList.size - 1))
+                        IconButton(
+                            onClick = {
+                                navController.navigate(
+                                    "video_screen"
+                                            + "?bottomBar_pic=" + playlist.videoList[playlist_index.toInt()+1].videoID
+                                            + "&bottomBar_title=" +
+                                            URLEncoder.encode( // encode to pass "&" and "/" characters
+                                                playlist.videoList[playlist_index.toInt()+1].videoTitle,
+                                                StandardCharsets.UTF_8.toString()
+                                            )
+                                            + "&playlist_id=" + playlist.playlistID
+                                            + "&playlist_index=" + (playlist_index.toInt() + 1)
+                                )
+                            },
+                            modifier = Modifier.align(Alignment.BottomEnd)
                         ) {
-                            items(items = list, itemContent = { item ->
-                                Column(modifier = Modifier
-                                    .padding(start = 0.dp)
-                                    .clip(RoundedCornerShape(12, 12, 5, 5))
-                                    .clickable {
-                                        navController.navigate("VideoScreen/k3y520IRXZ4") // link to video
-                                    }
-                                ) { // Video Display
-                                    AsyncImage( // Video thumbnail
-                                        model = fullsize_path_img,
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .size(width = 220.dp, height = 134.dp)
-                                            .clip(RoundedCornerShape(12))
-                                    )
-                                    Text( // Video name
-                                        text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
-                                        maxLines = 2,
-                                        modifier = Modifier
-                                            .width(220.dp)
-                                            .height(IntrinsicSize.Max),
-                                        fontSize = 16.sp,
-                                        fontFamily = montserrat_light,
-                                        color = Color.White
-                                    )
-                                }
-                            })
-                        }
-                    }
-                }
-            }
-
-            // Display add playlist
-            AnimatedVisibility(
-                visible = showAddPlaylist,
-                enter = fadeIn(animationSpec = tween(1000)),
-                exit = fadeOut(animationSpec = tween(1000)),
-                modifier = Modifier.align(Alignment.Center)
-            ) {
-
-                // System back button
-                BackHandler(
-                    enabled = true,
-                    onBack = { showAddPlaylist = false.apply { dialogue = false } })
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.6f))
-                        .clickable(
-                            interactionSource = interactionSource,
-                            indication = null
-                        ) {}
-                ) {
-
-                    // Back button
-                    IconButton(onClick = { showAddPlaylist = false.apply { dialogue = false } }) {
-                        Image(
-                            // back symbol
-                            painter = painterResource(id = R.drawable.arrow_back_icon),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(35.dp)
-                                .align(Alignment.TopStart),
-                            colorFilter = ColorFilter.tint(color = Color.White),
-                        )
-                    }
-
-                    Box( // white box
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6, 6, 0, 0))
-                            .background(Color.White)
-                            .fillMaxHeight(0.65f)
-                            .fillMaxWidth(0.80f)
-                            .align(Alignment.BottomCenter)
-                            .fillMaxHeight(0.5f)
-                    ) {
-                        Column(modifier = Modifier.fillMaxHeight()) {
-                            Box( // green box
+                            Image(
+                                painter = painterResource(id = R.drawable.skip_next_icon),
+                                contentDescription = null,
                                 modifier = Modifier
-                                    .background(Color(0xFF24CAAC))
-                                    .fillMaxHeight(0.18f)
-                                    .fillMaxWidth()
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.CenterStart)
-                                        .padding(start = 20.dp)
-                                ) {
-                                    Text( // Title Text
-                                        text = "Add to Playlist",
-                                        fontSize = 23.sp,
-                                        fontFamily = montserrat_bold,
-                                        color = Color.White
-                                    )
-                                }
-                            }
-                            // Playlist list
-                            Box(
-                                modifier = Modifier.padding(
-                                    start = 20.dp,
-                                    top = 10.dp,
-                                    end = 20.dp
-                                )
-                            ) {
-                                Column() {
-                                    Row(modifier = Modifier.clickable() {
-                                        showCreateNewPlaylist = true
-                                    }) {
-                                        Text( // Title Text
-                                            text = "Create New Playlist",
-                                            fontSize = 20.sp,
-                                            fontFamily = montserrat_light,
-                                            color = Color.Black
-                                        )
-
-                                        Spacer(Modifier.weight(1f))
-
-                                        Image( // add new icon
-                                            painter = painterResource(id = R.drawable.add_new_icon),
-                                            contentDescription = null,
-                                            modifier = Modifier
-                                                .size(35.dp)
-                                                .align(Alignment.CenterVertically)
-                                                .clickable(onClick = {
-                                                    showCreateNewPlaylist = true
-                                                }),
-                                            colorFilter = ColorFilter.tint(color = Color.Gray)
-                                        )
-                                    }
-
-                                    Spacer(modifier = Modifier.height(7.dp))
-
-                                    Box( // line seperater
-                                        modifier = Modifier
-                                            .background(Color(0xFF828282))
-                                            .fillMaxWidth(1f)
-                                            .height(2.dp)
-                                    )
-
-                                    Spacer(modifier = Modifier.height(7.dp))
-
-                                    Box(modifier = Modifier.fillMaxHeight(.75f)) {
-                                        LazyColumn() {
-                                            items(items = playlistsList, itemContent = { item ->
-
-                                                Row(modifier = Modifier.clickable() {
-                                                    // ADD VIDEO TO PLAYLIST HERE
-                                                }) {
-                                                    Text( // Playlist Title
-                                                        text = item,
-                                                        fontSize = 20.sp,
-                                                        fontFamily = montserrat_light,
-                                                        color = Color.Black
-                                                    )
-
-                                                    Spacer(Modifier.weight(1f))
-
-                                                    Image( // add to playlist icon
-                                                        painter = painterResource(id = R.drawable.check_box_outline_blank_icon),
-                                                        contentDescription = null,
-                                                        modifier = Modifier
-                                                            .size(35.dp)
-                                                            .align(Alignment.CenterVertically)
-                                                            .clickable() {
-                                                                // ADD VIDEO TO PLAYLIST HERE
-                                                            },
-                                                        colorFilter = ColorFilter.tint(color = Color.Gray)
-                                                    )
-                                                }
-
-                                                Spacer(modifier = Modifier.height(5.dp))
-
-                                            })
-                                        }
-                                    }
-
-                                    Button(
-                                        onClick = {
-                                            showAddPlaylist = false.apply { dialogue = false }
-                                        },
-                                        colors = ButtonDefaults.buttonColors(
-                                            backgroundColor = Color(
-                                                0xFF3392EA
-                                            )
-                                        ),
-                                        modifier = Modifier.align(Alignment.CenterHorizontally),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Text(
-                                            text = "Confirm",
-                                            color = Color.White,
-                                            fontFamily = montserrat_bold
-                                        )
-                                    }
-
-
-                                }
-                            }
+                                    .size(35.dp),
+                                colorFilter = ColorFilter.tint(color = Color.White),
+                            )
                         }
+
                     }
-
-
-                }
-            }
-
-            // Display Create new playlist
-            AnimatedVisibility(
-                visible = showCreateNewPlaylist,
-                enter = fadeIn(animationSpec = tween(1000)),
-                exit = fadeOut(animationSpec = tween(1000)),
-                modifier = Modifier.align(Alignment.Center)
-            ) {
-
-                var text by remember { mutableStateOf("") } // editable text
-
-                // System back button
-                BackHandler(
-                    enabled = true,
-                    onBack = { showCreateNewPlaylist = false })
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clickable(
-                            interactionSource = interactionSource,
-                            indication = null
-                        ) {}
-                ) {
-
-                    // Back button
-                    IconButton(onClick = { showCreateNewPlaylist = false }) {
-                        Image(
-                            // back symbol
-                            painter = painterResource(id = R.drawable.arrow_back_icon),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(35.dp)
-                                .align(Alignment.TopStart),
-                            colorFilter = ColorFilter.tint(color = Color.White),
-                        )
-                    }
-
-                    Box( // white box
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6, 6, 0, 0))
-                            .background(Color.White)
-                            .fillMaxHeight(0.65f)
-                            .fillMaxWidth(0.80f)
-                            .align(Alignment.BottomCenter)
-                            .fillMaxHeight(0.5f)
-                    ) {
-                        Column() {
-                            Box( // green box
-                                modifier = Modifier
-                                    .background(Color(0xFF24CAAC))
-                                    .fillMaxHeight(0.18f)
-                                    .fillMaxWidth()
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.CenterStart)
-                                        .padding(start = 20.dp)
-                                ) {
-                                    Text( // Title Text
-                                        text = "Create New Playlist",
-                                        fontSize = 23.sp,
-                                        fontFamily = montserrat_bold,
-                                        color = Color.White
-                                    )
-                                }
-                            }
-                            Box(
-                                modifier = Modifier.padding(
-                                    start = 20.dp,
-                                    top = 10.dp,
-                                    end = 20.dp
-                                )
-                            ) {
-                                Column() {
-                                    Spacer(modifier = Modifier.height(11.dp))
-                                    val customTextSelectionColors =
-                                        TextSelectionColors( // selection text color
-                                            handleColor = Color(0xFF24CAAC),
-                                            backgroundColor = Color(0xFF24CAAC).copy(alpha = 0.4f)
-                                        )
-                                    CompositionLocalProvider(LocalTextSelectionColors provides customTextSelectionColors) {
-                                        BasicTextField(
-                                            // textfield
-                                            value = text,
-                                            onValueChange = { newText -> text = newText },
-                                            textStyle = TextStyle(
-                                                fontSize = 18.sp,
-                                                fontWeight = FontWeight.Medium,
-                                                color = Color.Black,
-                                                fontFamily = montserrat_light
-                                            ),
-                                            singleLine = true,
-                                            cursorBrush = SolidColor(Color.Black),
-                                            modifier = Modifier
-                                                .fillMaxWidth(1f)
-                                                .height(30.dp),
-                                            decorationBox = { innerTextField ->
-                                                Row {
-                                                    if (text.isEmpty()) { // if there is no text
-                                                        Text(
-                                                            // search placeholder
-                                                            text = "Insert Playlist Name",
-                                                            fontSize = 18.sp,
-                                                            fontWeight = FontWeight.Normal,
-                                                            color = Color.Black.copy(alpha = 0.5f),
-                                                            fontFamily = montserrat_light,
-                                                            modifier = Modifier.align(Alignment.CenterVertically),
-                                                        )
-                                                    }
-                                                    innerTextField()
-                                                }
-                                            },
-                                        )
-                                    }
-
-                                    Box( // line seperater
-                                        modifier = Modifier
-                                            .background(Color(0xFF828282))
-                                            .fillMaxWidth(1f)
-                                            .height(2.dp)
-                                    )
-
-                                    Spacer(modifier = Modifier.height(50.dp))
-
-                                    Button(
-                                        onClick = {
-                                            if (!text.isEmpty())
-                                                showCreateNewPlaylist = false
-                                            else
-                                                openNoTitleDialog = true
-                                        },
-                                        colors = ButtonDefaults.buttonColors(
-                                            backgroundColor = Color(
-                                                0xFF3392EA
-                                            )
-                                        ),
-                                        modifier = Modifier.align(Alignment.CenterHorizontally),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Text(
-                                            text = "Confirm",
-                                            color = Color.White,
-                                            fontFamily = montserrat_bold
-                                        )
-                                    }
-
-                                }
-                            }
-                        }
-                    }
-
 
                 }
             }

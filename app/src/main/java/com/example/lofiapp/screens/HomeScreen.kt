@@ -105,7 +105,11 @@ import java.nio.charset.StandardCharsets
 // bottom bar navigation functionality, fixed search bar sizing
 @OptIn(ExperimentalMaterialApi::class, ExperimentalFoundationApi::class)
 @Composable
-fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_title: String) {
+fun HomeScreen(
+    navController: NavController,
+    bottomBar_pic: String,
+    bottomBar_title: String
+) {
 
     // System Back handler (Go nowhere)
     BackHandler(true, onBack = { })
@@ -150,7 +154,7 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
     // Generate playlist list once
     var generateList by remember { mutableStateOf(true) }
 
-    // Generate playlist list once
+    // Add video to playlist video
     var addVideo by remember { mutableStateOf(youtubeVideo()) }
 
     // Generate playlist list once
@@ -199,7 +203,6 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
             override fun onCancelled(error: DatabaseError) {}
         })
     }
-
 
     // System bar colors
     val systemUiController = rememberSystemUiController()
@@ -326,13 +329,15 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                 .clickable(
                                     onClick = {
                                         navController.navigate(  // navigates to video screen
-                                            "video_screen/"
-                                                    + it?.videoID.toString()
-                                                    + "/"
-                                                    + URLEncoder.encode( // encode to pass "&" character
-                                                it?.videoTitle.toString(),
-                                                StandardCharsets.UTF_8.toString()
-                                            )
+                                            "video_screen"
+                                                    + "?bottomBar_pic=" + it?.videoID.toString()
+                                                    + "&bottomBar_title=" +
+                                                    URLEncoder.encode( // encode to pass "&" character
+                                                        it?.videoTitle.toString(),
+                                                        StandardCharsets.UTF_8.toString()
+                                                    )
+                                                    + "&playlist_id=" + "none"
+                                                    + "&playlist_index=" + "-1"
                                         )
                                     }
                                 )
@@ -398,18 +403,24 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                     }
 
                     // Playlists display (horz. scroll)
-                    LazyRow(modifier = Modifier.padding(start = 13.dp, top = 6.dp)) {
-                        items(items = playlist_List, itemContent = { item ->
+                    Row(
+                        modifier = Modifier
+                            .padding(start = 13.dp, top = 6.dp)
+                            .height(IntrinsicSize.Max)
+                            .horizontalScroll(rememberScrollState())
+                    ) {
+                        playlist_List.forEach {
+
                             Column(
                                 modifier = Modifier
                                     .padding(start = 16.dp)
                                     .clip(RoundedCornerShape(12, 12, 5, 5))
                                     .clickable { // Click to go to playlist
                                         // Go to selected playlist
-                                        if (!item?.playlistTitle.equals("Create New Playlist"))
+                                        if (!it?.playlistTitle.equals("Create New Playlist"))
                                             navController.navigate(
                                                 "playlist_screen" +
-                                                        "/" + item?.playlistID.toString() +
+                                                        "/" + it?.playlistID.toString() +
                                                         "?new_playlist=" + false +
                                                         "&bottomBar_pic=" + bottomBar_pic +
                                                         "&bottomBar_title=" +
@@ -436,7 +447,7 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                             ) {
                                 Box() {
                                     // Create New Playlist button
-                                    if (item?.playlistTitle.equals("Create New Playlist")) {
+                                    if (it?.playlistTitle.equals("Create New Playlist")) {
                                         Image(
                                             painter = painterResource(id = R.drawable.add_new_icon),
                                             colorFilter = ColorFilter.tint(Color.White),
@@ -449,9 +460,9 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                     }
 
                                     // Playlist with videos button
-                                    if (item?.playlistCount!! > 0) {
+                                    if (it?.videoList?.size!! > 0) {
                                         AsyncImage( // Video Thumbnail
-                                            model = "https://img.youtube.com/vi/" + item?.videoList?.get(
+                                            model = "https://img.youtube.com/vi/" + it?.videoList?.get(
                                                 0
                                             )?.videoID.toString() + "/maxres2.jpg",
                                             contentDescription = null,
@@ -468,7 +479,7 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                                 .align(alignment = Alignment.TopEnd)
                                         ) {
                                             Text( // Number of videos in playlist
-                                                text = item.playlistCount.toString(),
+                                                text = it.playlistCount.toString(),
                                                 modifier = Modifier
                                                     .align(alignment = Alignment.Center),
                                                 color = Color.White,
@@ -478,7 +489,7 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                     }
 
                                     // Playlist without videos button
-                                    if (item?.playlistCount == 0 && !item?.playlistTitle.equals("Create New Playlist")) {
+                                    if (it?.playlistCount == 0 && !it?.playlistTitle.equals("Create New Playlist")) {
                                         Box(
                                             modifier = Modifier
                                                 .size(width = 220.dp, height = 134.dp)
@@ -488,7 +499,7 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                     }
                                 }
                                 Text( // Playlist Name
-                                    text = item?.playlistTitle.toString(),
+                                    text = it?.playlistTitle.toString(),
                                     maxLines = 2,
                                     modifier = Modifier
                                         .width(220.dp)
@@ -497,7 +508,7 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                     fontFamily = montserrat_light
                                 )
                             }
-                        })
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(25.dp))
@@ -506,13 +517,15 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                     FloatingActionButton(
                         onClick = {
                             navController.navigate(
-                                "video_screen/"
-                                        + recList[4]?.videoID.toString()
-                                        + "/"
-                                        + URLEncoder.encode( // encode to pass "&" character
-                                    recList[4]?.videoTitle.toString(),
-                                    StandardCharsets.UTF_8.toString()
-                                )
+                                "video_screen"
+                                        + "?bottomBar_pic=" + recList[4]?.videoID.toString()
+                                        + "&bottomBar_title=" +
+                                        URLEncoder.encode( // encode to pass "&" character
+                                            recList[4]?.videoTitle.toString(),
+                                            StandardCharsets.UTF_8.toString()
+                                        )
+                                        + "&playlist_id=" + "none"
+                                        + "&playlist_index=" + "-1"
                             )
                         },
                         contentColor = Color(0xFF24CAAC),
@@ -552,12 +565,15 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                 .clip(RoundedCornerShape(12))
                                 .clickable {
                                     navController.navigate(
-                                        "video_screen/"
-                                                + bottomBar_pic + "/"
-                                                + URLEncoder.encode( // encode to pass "&" and "/" characters
-                                            bottomBar_title,
-                                            StandardCharsets.UTF_8.toString()
-                                        )
+                                        "video_screen"
+                                                + "?bottomBar_pic=" + bottomBar_pic
+                                                + "&bottomBar_title=" +
+                                                URLEncoder.encode( // encode to pass "&" and "/" characters
+                                                    bottomBar_title,
+                                                    StandardCharsets.UTF_8.toString()
+                                                )
+                                                + "&playlist_id=" + "none"
+                                                + "&playlist_index=" + "-1"
                                     )
                                 }
                                 .fillMaxWidth(.95f),
@@ -615,7 +631,6 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
-
         // Display add playlist popup
         AnimatedVisibility(
             visible = showAddPlaylist,
@@ -819,6 +834,12 @@ fun HomeScreen(navController: NavController, bottomBar_pic: String, bottomBar_ti
                                         }
                                     }
                                     addVideoToPlaylists = false
+
+                                    // Generate playlist_list again (avoid crash)
+                                    playlist_List.removeRange(0,playlist_List.lastIndex + 1)
+                                    generateList = true.apply {
+                                        playlist_List.removeRange(0,0)
+                                    }
                                 }
 
                                 Button(

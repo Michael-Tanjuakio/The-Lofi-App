@@ -113,11 +113,6 @@ fun PlaylistScreen(
     systemUiController.setStatusBarColor(color = Color(0xFF24CAAC))         // System top bar color
     systemUiController.setNavigationBarColor(color = Color(0xFF24CAAC))     // System bottom bar color
 
-    // leftover testing data
-    val list_ = listOf("1", "1", "1", "1", "1", "1", "1", "1") // placeholder
-    val video_id = "jfKfPfyJRdk" // video-id example
-    val fullsize_path_img =
-        "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
 
     // Make default empty playlist
     var playlist by remember { mutableStateOf(single_playlist()) }
@@ -129,7 +124,7 @@ fun PlaylistScreen(
             .child(playlist_path)
             .addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    if(getPlaylist)
+                    if (getPlaylist)
                         playlist = dataSnapshot.getValue<single_playlist?>()!!.apply {
                             getPlaylist = false
                         }
@@ -144,9 +139,6 @@ fun PlaylistScreen(
                 "\nplaylist id = " + playlist.playlistID +
                 "\nplaylist title = " + playlist.playlistTitle
     )
-
-    // Get playlist of videos
-    val list = playlist.videoList
 
     // delete dialog popup
     var openDialog by remember { mutableStateOf(false) }
@@ -244,7 +236,7 @@ fun PlaylistScreen(
                     .padding(top = 20.dp, bottom = 55.dp)
                     .fillMaxWidth()
             ) {
-                items(items = list, itemContent = { item ->
+                items(items = playlist.videoList, itemContent = { item ->
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -260,14 +252,16 @@ fun PlaylistScreen(
                                     .clip(RoundedCornerShape(12, 12, 5, 5))
                                     .clickable {
                                         if (item != null) {
-                                            navController.navigate(
-                                                "video_screen/" +
-                                                        video_id +
-                                                        "/" +
+                                            navController.navigate(  // navigates to video screen
+                                                "video_screen"
+                                                        + "?bottomBar_pic=" + item?.videoID.toString()
+                                                        + "&bottomBar_title=" +
                                                         URLEncoder.encode( // encode to pass "&" character
-                                                            item.videoID,
+                                                            item?.videoTitle.toString(),
                                                             StandardCharsets.UTF_8.toString()
                                                         )
+                                                        + "&playlist_id=" + playlist.playlistID
+                                                        + "&playlist_index=" + playlist.videoList.indexOf(item)
                                             )
                                         }
                                     }
@@ -317,12 +311,15 @@ fun PlaylistScreen(
                                 .clip(RoundedCornerShape(12))
                                 .clickable {
                                     navController.navigate(
-                                        "video_screen/"
-                                                + bottomBar_pic + "/"
-                                                + URLEncoder.encode( // encode to pass "&" character
-                                            bottomBar_title,
-                                            StandardCharsets.UTF_8.toString()
-                                        )
+                                        "video_screen"
+                                                + "?bottomBar_pic=" + bottomBar_pic
+                                                + "&bottomBar_title=" +
+                                                URLEncoder.encode( // encode to pass "&" and "/" characters
+                                                    bottomBar_title,
+                                                    StandardCharsets.UTF_8.toString()
+                                                )
+                                                + "&playlist_name=" + "none"
+                                                + "&playlist_index=" + "-1"
                                     )
                                 }
                                 .fillMaxWidth(.95f),
@@ -416,7 +413,7 @@ fun PlaylistScreen(
                                 getPlaylist = false
                                 FirebaseDatabase.getInstance().getReference("playlists")
                                     .child(playlist_path).removeValue()
-                                navController.navigate(ScreenRoutes.HomeScreen.route)
+                                navBack()
                             },
                             modifier = Modifier
                                 .padding(top = 150.dp, end = 150.dp)

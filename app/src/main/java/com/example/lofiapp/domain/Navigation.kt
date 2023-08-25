@@ -120,15 +120,19 @@ fun Navigation() {
         // video screen
         composable(
             route = "video_screen" +
-                    "/{bottomBar_pic}" +
-                    "/{bottomBar_title}",
+                    "?bottomBar_pic={bottomBar_pic}" +
+                    "&bottomBar_title={bottomBar_title}" +
+                    "&playlist_id={playlist_id}" +
+                    "&playlist_index={playlist_index}",
             arguments = listOf(
                 navArgument("bottomBar_pic") { defaultValue = "" },
-                navArgument("bottomBar_title") { defaultValue = "" }
+                navArgument("bottomBar_title") { defaultValue = "" },
+                navArgument("playlist_id") { defaultValue = "" },
+                navArgument("playlist_index") { defaultValue = "" }
             )
         ) { entry ->
 
-            // Initialize variables (no video playing)
+            // Initialize variables
             var bottomBar_pic = entry.arguments?.getString("bottomBar_pic").toString()
             var bottomBar_title = entry.arguments?.getString("bottomBar_title").toString()
 
@@ -146,11 +150,48 @@ fun Navigation() {
             }
 
             // Display video screen
-            VideoScreen(
-                navController = navController,
-                bottomBar_pic,
-                bottomBar_title
-            )
+            // Video from home screen/search screen
+            if (entry.arguments?.getString("playlist_index").toString().equals("-1")) {
+                VideoScreen(
+                    navController = navController,
+                    bottomBar_pic,
+                    bottomBar_title,
+                    single_playlist(),
+                    entry.arguments?.getString("playlist_index").toString()
+                )
+            }
+            else { // Video from playlist
+
+                // Get the playlist
+                var playlist by remember { mutableStateOf(single_playlist()) }
+                var getPlaylist by remember { mutableStateOf(true) }
+                LaunchedEffect(true) {
+                    FirebaseDatabase.getInstance().getReference("playlists")
+                        .child(entry.arguments?.getString("playlist_id").toString())
+                        .addValueEventListener(object : ValueEventListener {
+                            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                                if (getPlaylist) {
+                                    playlist = (dataSnapshot.getValue<single_playlist>()!!)
+                                    getPlaylist = false
+                                }
+                            }
+
+                            override fun onCancelled(error: DatabaseError) {}
+                        })
+                    FirebaseDatabase.getInstance().getReference("playlists")
+                        .child(entry.arguments?.getString("playlist_id").toString()).get()
+                }
+
+                // Go to video screen
+                VideoScreen(
+                    navController = navController,
+                    bottomBar_pic,
+                    bottomBar_title,
+                    playlist,
+                    entry.arguments?.getString("playlist_index").toString()
+                )
+
+            }
         }
 
         // playlist screen
@@ -202,10 +243,15 @@ fun Navigation() {
             if (new_playlist == true) {
                 // get children in home screen (top) DONE
                 // add playlist id DONE
-                // add "add" button in home screen and search screen
+                // add "add" button in home screen DONE
                 // change display for empty playlist DONE
-                // add remove function
-                // fix bottom bar for delete in playlist/edit playlist screen
+                // add remove function DONE
+                // fix bottom bar for delete in playlist/edit playlist screen DONE
+                // Add "add" button to search screen DONE
+                // fix spacing bug in playlists DONE
+                // fix all bottom bar arguments DONE
+                // Fix play next/previous function DONE
+                // Fix autoplay next video DONE
 
                 var i = entry.arguments!!.getInt("playlist_count")
                 Log.d(

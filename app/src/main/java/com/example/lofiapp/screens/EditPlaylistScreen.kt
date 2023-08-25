@@ -137,22 +137,6 @@ fun EditPlaylistScreen(
     activity.requestedOrientation =
         ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
 
-    // Sample list
-    var list_ = remember {
-        mutableStateOf(
-            listOf(
-                "abc 1",
-                "letter 2",
-                "sing 3",
-                "thai 4",
-                "five 5",
-                "big 6",
-            )
-        )
-    }
-
-    // Make default empty playlist
-
     // Editable playlist title
     var text by remember { mutableStateOf(playlist.playlistTitle) }
 
@@ -426,12 +410,15 @@ fun EditPlaylistScreen(
                                 .clip(RoundedCornerShape(12))
                                 .clickable {
                                     navController.navigate(
-                                        "video_screen/"
-                                                + bottomBar_pic + "/"
-                                                + URLEncoder.encode( // encode to pass "&" character
-                                            bottomBar_title,
-                                            StandardCharsets.UTF_8.toString()
-                                        )
+                                        "video_screen"
+                                                + "?bottomBar_pic=" + bottomBar_pic
+                                                + "&bottomBar_title=" +
+                                                URLEncoder.encode( // encode to pass "&" and "/" characters
+                                                    bottomBar_title,
+                                                    StandardCharsets.UTF_8.toString()
+                                                )
+                                                + "&playlist_id=" + "none"
+                                                + "&playlist_index=" + "-1"
                                     )
                                 }
                                 .fillMaxWidth(.95f),
@@ -522,7 +509,11 @@ fun EditPlaylistScreen(
                             onClick = {
                                 FirebaseDatabase.getInstance().getReference("playlists")
                                     .child(playlist_path).removeValue()
-                                navController.navigate(ScreenRoutes.HomeScreen.route)
+                                navController.navigate(
+                                    "home_screen" +
+                                            "?bottomBar_pic=" + bottomBar_pic +
+                                            "?bottomBar_title=" + bottomBar_title
+                                )
                             },
                             modifier = Modifier
                                 .padding(top = 150.dp, end = 150.dp)
