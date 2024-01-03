@@ -9,7 +9,7 @@ This application is built by 2 people team as a personal project.
 2. Laura Villarreal
 
 # Technologies
-Kotlin | Android Studio
+Kotlin | Android Studio | Firebase Database
 
 # Run The Lofi App
 This app can be installed through Android Studio:
