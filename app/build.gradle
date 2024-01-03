@@ -1,6 +1,8 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    // Add the Google services Gradle plugin
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -67,7 +69,8 @@ dependencies {
 
     def nav_version = "2.5.3"
 
-    implementation("androidx.navigation:navigation-compose:$nav_version")
+    implementation 'com.airbnb.android:lottie-compose:5.2.0' // Splash Screen
+    implementation("androidx.navigation:navigation-compose:$nav_version") // Navigation
 
     // Youtube Player Implementation
     implementation 'com.pierfrancescosoffritti.androidyoutubeplayer:core:12.0.0'
@@ -80,6 +83,30 @@ dependencies {
 
     // System bar color control Implementation
     implementation "com.google.accompanist:accompanist-systemuicontroller:0.27.0"
+
+    // Import the Firebase BoM
+    implementation(platform("com.google.firebase:firebase-bom:32.2.0"))
+
+    // When using the BoM, you don't specify versions in Firebase library dependencies
+
+    // Add the dependency for the Firebase SDK for Google Analytics
+    implementation("com.google.firebase:firebase-analytics-ktx")
+
+    // TODO: Add the dependencies for any other Firebase products you want to use
+    // See https://firebase.google.com/docs/android/setup#available-libraries
+    // For example, add the dependencies for Firebase Authentication and Cloud Firestore
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+
+    // Implement database
+    // Import the BoM for the Firebase platform
+    implementation(platform("com.google.firebase:firebase-bom:32.2.0"))
+
+    // Add the dependency for the Realtime Database library
+    // When using the BoM, you don't specify versions in Firebase library dependencies
+    implementation("com.google.firebase:firebase-database-ktx")
+
+    implementation "androidx.compose.material:material:1.5.0-alpha03"
 
 
 }

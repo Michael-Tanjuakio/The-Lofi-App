@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "746110137902",
+    "project_id": "lofiapp-389323",
+    "storage_bucket": "lofiapp-389323.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:746110137902:android:e59e97ce18be1aac0411bf",
+        "android_client_info": {
+          "package_name": "com.example.lofiapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "746110137902-765lq9qep3k5rdj3koks2ba80hqe7n45.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.lofiapp",
+            "certificate_hash": "cc94dc439126eb6131381fbe51a88c3fc7445029"
+          }
+        },
+        {
+          "client_id": "746110137902-efvcco6jm747nnbd9lr8to39i45bmo0c.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBXpZIB43mL0rdwWQuS3KO66rbkCUENpLs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "746110137902-efvcco6jm747nnbd9lr8to39i45bmo0c.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

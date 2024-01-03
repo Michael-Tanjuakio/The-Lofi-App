@@ -1,16 +1,25 @@
 package com.example.lofiapp.screens
 
+import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.pm.ActivityInfo
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -38,6 +47,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
@@ -51,6 +61,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -67,38 +78,111 @@ import com.example.lofiapp.data.ScreenRoutes
 import com.example.lofiapp.ui.theme.flamenco_regular
 import com.example.lofiapp.ui.theme.montserrat_bold
 import com.example.lofiapp.ui.theme.montserrat_light
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.ktx.getValue
+import okhttp3.internal.toImmutableList
 import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.detectReorderAfterLongPress
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
 import org.burnoutcrew.reorderable.reorderable
+import java.net.URLDecoder
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.util.Collections
 import java.util.Collections.list
 
 
+@SuppressLint("SuspiciousIndentation")
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun EditPlaylistScreen(navController: NavController) {
+fun EditPlaylistScreen(
+    navController: NavController,
+    playlist_path: String,
+    bottomBar_pic: String,
+    bottomBar_title: String,
+    playlist: single_playlist
+) {
 
-    //val list = remember { mutableStateListOf<String>("1", "2", "3") } // placeholder
-    var list = remember { mutableStateOf(listOf("abc 1", "letter 2", "sing 3", "thai 4","five 5", "big 6",)) }
+    // Navigate back function
+    fun navBack(rewrite: single_playlist) {
+        // Rewrite playlist to database
+        FirebaseDatabase.getInstance().getReference("playlists")
+            .child(playlist_path).setValue(rewrite)
 
-    val state = rememberReorderableLazyListState(onMove = { from, to ->
-        list.value = list.value.toMutableList().apply {
-            add(to.index, removeAt(from.index))
-        }
-    })
+        // Save data when navigating back
+        navController.previousBackStackEntry
+            ?.savedStateHandle
+            ?.set("new_bottomBar_pic", bottomBar_pic)
+        navController.previousBackStackEntry
+            ?.savedStateHandle
+            ?.set("new_bottomBar_title", bottomBar_title)
+        navController.previousBackStackEntry
+            ?.savedStateHandle
+            ?.set("new_playlist", false)
+        navController.previousBackStackEntry
+            ?.savedStateHandle
+            ?.set("playlist_id", rewrite.playlistID)
 
-    val video_id = "jfKfPfyJRdk" // video-id example
-    val fullsize_path_img =
-        "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
+        // navigate back
+        navController
+            .popBackStack()
+    }
 
-    var text by remember { mutableStateOf("Playlist of the Century") }
+    // Locked Vertical Orientation
+    val context = LocalContext.current
+    val activity = remember { context as Activity }
+    activity.requestedOrientation =
+        ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
 
+    // Editable playlist title
+    var text by remember { mutableStateOf(playlist.playlistTitle) }
+
+    var new_playlist by remember { mutableStateOf(listOf<youtubeVideo>()) }
+
+    // Popups
     var openDialog by remember { mutableStateOf(false) } // delete dialog popup
     var openNoTitleDialog by remember { mutableStateOf(false) } // no title dialog popup
     var openDeleteVideoDialog by remember { mutableStateOf(false) } // delete video dialog popup
     var deleteVideo by remember { mutableStateOf(false) } // delete video dialog popup
     var index by remember { mutableStateOf(0) } // delete video dialog popup
 
+    // Get playlist of videos
+    val list = remember {
+        mutableStateOf(
+            playlist.videoList
+        )
+    }
+
+    Log.d(
+        "new_bp",
+        "editable list = " + list
+    )
+
+
+    // System Back handler
+    BackHandler(true, onBack = {
+        if (!text.isEmpty())
+            navBack(
+                single_playlist(
+                    playlist.playlistID,
+                    text,
+                    new_playlist.size,
+                    new_playlist
+                )
+            )
+        else
+            openNoTitleDialog = true
+    })
+
+    // Reorderable Lazy List State
+    val state = rememberReorderableLazyListState(onMove = { from, to ->
+        list.value = list.value.toMutableList().apply {
+            add(to.index, removeAt(from.index))
+        }
+    })
 
     Scaffold(
         topBar = {
@@ -132,7 +216,14 @@ fun EditPlaylistScreen(navController: NavController) {
                 Box(modifier = Modifier.padding(start = 5.dp, top = 3.dp)) { // Back button
                     IconButton(onClick = {
                         if (!text.isEmpty())
-                            navController.navigateUp()
+                            navBack(
+                                single_playlist(
+                                    playlist.playlistID,
+                                    text,
+                                    new_playlist.size,
+                                    new_playlist
+                                )
+                            )
                         else
                             openNoTitleDialog = true
                     }) {
@@ -201,13 +292,19 @@ fun EditPlaylistScreen(navController: NavController) {
                     .detectReorderAfterLongPress(state),
                 state = state.listState,
             ) {
-                items(list.value, {it}) { item ->
+                items(list.value, itemContent = { item ->
                     ReorderableItem(state, key = item) { isDragging ->
+                        new_playlist = list.value.subList(0,list.value.size)
                         val elevation = animateDpAsState(if (isDragging) 16.dp else 0.dp)
+                            Log.d(
+                                "new_bp",
+                                "passing: display video = " + item
+                            )
 
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
+                                .shadow(elevation.value)
                         ) {
                             Box(
                                 modifier = Modifier
@@ -230,29 +327,32 @@ fun EditPlaylistScreen(navController: NavController) {
                                             .align(CenterVertically)
                                             .padding(end = 10.dp)
                                     )
-                                    AsyncImage( // Video thumbnail
-                                        model = fullsize_path_img,
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .size(width = 140.dp, height = 87.dp)
-                                            .clip(RoundedCornerShape(12))
-                                            .align(CenterVertically)
-                                            .background(Color.Transparent)
-                                    )
-                                    Text( // Video name
-                                        //  "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
-                                        text = "video " + item,
-                                        maxLines = 4,
-                                        modifier = Modifier
-                                            .padding(start = 8.dp)
-                                            .width(90.dp)
-                                            .height(80.dp)
-                                            .align(CenterVertically),
-                                        //.border(border = BorderStroke(2.dp, Color.Red)),
-                                        fontSize = 13.sp,
-                                        fontFamily = montserrat_light
-                                    )
+                                    if (item != null) {
+                                        AsyncImage( // Video thumbnail
+                                            model = "https://img.youtube.com/vi/" + item.videoID + "/maxres2.jpg",
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .size(width = 140.dp, height = 87.dp)
+                                                .clip(RoundedCornerShape(12))
+                                                .align(CenterVertically)
+                                                .background(Color.Transparent)
+                                        )
+                                    }
+                                    if (item != null) {
+                                        Text( // Video name
+                                            text = item.videoTitle,
+                                            maxLines = 4,
+                                            modifier = Modifier
+                                                .padding(start = 8.dp)
+                                                .width(90.dp)
+                                                .height(80.dp)
+                                                .align(CenterVertically),
+                                            //.border(border = BorderStroke(2.dp, Color.Red)),
+                                            fontSize = 13.sp,
+                                            fontFamily = montserrat_light
+                                        )
+                                    }
                                     // delete video button
                                     Image(
                                         painter = painterResource(id = R.drawable.delete_video_icon),
@@ -263,7 +363,9 @@ fun EditPlaylistScreen(navController: NavController) {
                                             .align(CenterVertically)
                                             .clip(RoundedCornerShape(12))
                                             .clickable {
-                                                index = list.component1().indexOf(item)
+                                                index = list
+                                                    .component1()
+                                                    .indexOf(item)
                                                 Log.d(
                                                     "deleteVideo",
                                                     "finding " + index
@@ -275,9 +377,15 @@ fun EditPlaylistScreen(navController: NavController) {
 
                                         Log.d(
                                             "deleteVideo",
-                                            "removed index " + index + " " + list.value[index] + "\n" + list.value.subList(0,index) + " " + list.value.subList(index+1,list.value.size)
+                                            "removed index " + index + " " + list.value[index] + "\n" + list.value.subList(
+                                                0,
+                                                index
+                                            ) + " " + list.value.subList(index + 1, list.value.size)
                                         )
-                                        list.value = list.value.subList(0,index) + list.value.subList(index+1,list.value.size)
+                                        list.value = list.value.subList(
+                                            0,
+                                            index
+                                        ) + list.value.subList(index + 1, list.value.size)
                                         deleteVideo = false
                                     }
 
@@ -285,56 +393,81 @@ fun EditPlaylistScreen(navController: NavController) {
                             }
                         }
                     }
-                }
+                })
             }
         },
         bottomBar = {
             // Bottom bar (Displays what video is played)
-            BottomNavigation(
-                modifier = Modifier
-                    .clickable {
-                        navController.navigate(ScreenRoutes.VideoScreen.route)
-                    },
-                backgroundColor = Color(0xFF3392EA)
-            ) {
-                Row() { // wrap in row to avoid default spacing
-                    AsyncImage( // video thumbnail
-                        model = fullsize_path_img,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
+            if (!bottomBar_title.equals("")) {
+                Column() {
+                    Row(
                         modifier = Modifier
-                            .padding(start = 16.dp, top = 6.dp)
-                            .size(width = 65.dp, height = 43.dp)
-                            .clip(RoundedCornerShape(12))
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(width = 140.dp, height = 53.dp)
-                            .padding(top = 3.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Text( // video name
-                            text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
-                            fontFamily = montserrat_bold,
-                            color = Color.White,
+                        BottomNavigation(
                             modifier = Modifier
-                                .padding(start = 12.dp)
-                                .fillMaxSize(),
-                            fontSize = 10.sp
-                        )
+                                .clip(RoundedCornerShape(12))
+                                .clickable {
+                                    navController.navigate(
+                                        "video_screen"
+                                                + "?bottomBar_pic=" + bottomBar_pic
+                                                + "&bottomBar_title=" +
+                                                URLEncoder.encode( // encode to pass "&" and "/" characters
+                                                    bottomBar_title,
+                                                    StandardCharsets.UTF_8.toString()
+                                                )
+                                                + "&playlist_id=" + "none"
+                                                + "&playlist_index=" + "-1"
+                                    )
+                                }
+                                .fillMaxWidth(.95f),
+                            backgroundColor = Color(0xFF3392EA),
+                        ) {
+                            Log.d(
+                                "video playing",
+                                "Search_screen: playing: " + bottomBar_title + " " + bottomBar_pic
+                            )
+                            Row(modifier = Modifier.fillMaxHeight()) { // wrap in row to avoid default spacing
+                                Spacer(modifier = Modifier.width(16.dp))
+                                AsyncImage( // video thumbnail
+                                    model = "https://img.youtube.com/vi/" + bottomBar_pic + "/maxres2.jpg",
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(width = 65.dp, height = 43.dp)
+                                        .clip(RoundedCornerShape(12))
+                                        .align(Alignment.CenterVertically)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(
+                                    modifier = Modifier
+                                        .align(Alignment.CenterVertically)
+                                        .fillMaxWidth(.90f)
+                                        .fillMaxHeight(.95f),
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text( // video name (decodes title)
+                                        text = URLDecoder.decode(
+                                            bottomBar_title,
+                                            StandardCharsets.UTF_8.toString()
+                                        ),
+                                        fontFamily = montserrat_bold,
+                                        color = Color.White,
+                                        modifier = Modifier
+                                            .basicMarquee(),
+                                        fontSize = 14.sp,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
                     }
+                    Spacer(
+                        modifier = Modifier
+                            .height(5.dp)
+                    )
                 }
-                Image( // play icon (note: make this a button)
-                    painter = painterResource(R.drawable.play_circle_icon),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .padding(top = 4.dp, end = 16.dp)
-                        .size(45.dp)
-                        .clip(RoundedCornerShape(75, 75, 75, 75))
-                        .clickable {
-                            navController.navigate(ScreenRoutes.VideoScreen.route)
-                        },
-                    colorFilter = ColorFilter.tint(color = Color.White)
-                )
             }
         }
     )
@@ -373,7 +506,15 @@ fun EditPlaylistScreen(navController: NavController) {
 
                         // yes button
                         Button(
-                            onClick = { navController.navigate(ScreenRoutes.HomeScreen.route) },
+                            onClick = {
+                                FirebaseDatabase.getInstance().getReference("playlists")
+                                    .child(playlist_path).removeValue()
+                                navController.navigate(
+                                    "home_screen" +
+                                            "?bottomBar_pic=" + bottomBar_pic +
+                                            "?bottomBar_title=" + bottomBar_title
+                                )
+                            },
                             modifier = Modifier
                                 .padding(top = 150.dp, end = 150.dp)
                                 .size(100.dp, 60.dp)

@@ -1,12 +1,23 @@
 package com.example.lofiapp.screens
 
+import android.app.Activity
+import android.content.pm.ActivityInfo
+import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -23,9 +34,11 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
@@ -35,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -47,17 +61,87 @@ import com.example.lofiapp.R
 import com.example.lofiapp.data.ScreenRoutes
 import com.example.lofiapp.ui.theme.montserrat_bold
 import com.example.lofiapp.ui.theme.montserrat_light
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.ktx.getValue
+import java.net.URLDecoder
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
+import java.util.HashMap
 
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun PlaylistScreen(navController: NavController) {
+fun PlaylistScreen(
+    navController: NavController,
+    playlist_path: String,
+    bottomBar_pic: String,
+    bottomBar_title: String
+) {
 
-    val list = listOf("1", "1", "1", "1", "1", "1", "1", "1") // placeholder
-    val video_id = "jfKfPfyJRdk" // video-id example
-    val fullsize_path_img =
-        "https://img.youtube.com/vi/$video_id/maxresdefault.jpg" // thumbnail link example
+    // Navigate back function
+    fun navBack() {
+        // Save data when navigating back
+        navController.previousBackStackEntry
+            ?.savedStateHandle
+            ?.set("new_bottomBar_pic", bottomBar_pic)
+        navController.previousBackStackEntry
+            ?.savedStateHandle
+            ?.set("new_bottomBar_title", bottomBar_title)
 
-    var openDialog by remember { mutableStateOf(false) } // delete dialog popup
+        // navigate back
+        navController
+            .popBackStack()
+    }
+
+    // System Back handler
+    BackHandler(true, onBack = {
+        navBack()
+    })
+
+    // Locked Vertical Orientation
+    val context = LocalContext.current
+    val activity = remember { context as Activity }
+    activity.requestedOrientation =
+        ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+
+    // System bar colors
+    val systemUiController = rememberSystemUiController()
+    systemUiController.setStatusBarColor(color = Color(0xFF24CAAC))         // System top bar color
+    systemUiController.setNavigationBarColor(color = Color(0xFF24CAAC))     // System bottom bar color
+
+
+    // Make default empty playlist
+    var playlist by remember { mutableStateOf(single_playlist()) }
+    var getPlaylist by remember { mutableStateOf(true) }
+
+    // Retrieve list in database
+    LaunchedEffect(true) {
+        FirebaseDatabase.getInstance().getReference("playlists")
+            .child(playlist_path)
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    if (getPlaylist)
+                        playlist = dataSnapshot.getValue<single_playlist?>()!!.apply {
+                            getPlaylist = false
+                        }
+                }
+
+                override fun onCancelled(error: DatabaseError) {}
+            })
+    }
+    Log.d(
+        "new_bp",
+        "opening playlist = " + playlist_path +
+                "\nplaylist id = " + playlist.playlistID +
+                "\nplaylist title = " + playlist.playlistTitle
+    )
+
+    // delete dialog popup
+    var openDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -73,7 +157,16 @@ fun PlaylistScreen(navController: NavController) {
                         modifier = Modifier
                             .size(36.dp)
                             .clickable {
-                                navController.navigate(ScreenRoutes.EditPlaylistScreen.route)
+                                navController.navigate(
+                                    "edit_playlist_screen" +
+                                            "/" + playlist.playlistID +
+                                            "?bottomBar_pic=" + bottomBar_pic +
+                                            "&bottomBar_title=" +
+                                            URLEncoder.encode(
+                                                bottomBar_title,
+                                                StandardCharsets.UTF_8.toString()
+                                            )
+                                )
                             }
                     )
                     // padding
@@ -108,7 +201,7 @@ fun PlaylistScreen(navController: NavController) {
             // Top App Bar Components
             Row {
                 Box(modifier = Modifier.padding(start = 5.dp, top = 3.dp)) { // Back button
-                    IconButton(onClick = { navController.navigateUp() }) {
+                    IconButton(onClick = { navBack() }) {
                         Image(
                             // back symbol
                             painter = painterResource(id = R.drawable.arrow_back_icon),
@@ -123,7 +216,7 @@ fun PlaylistScreen(navController: NavController) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Playlist of the Century",
+                        text = playlist.playlistTitle,
                         fontFamily = montserrat_bold,
                         color = Color.White,
                         modifier = Modifier
@@ -138,51 +231,66 @@ fun PlaylistScreen(navController: NavController) {
         },
         content = { padding ->
             // Searched Videos Display (vertical. scroll)
-            LazyColumn(modifier = Modifier.padding(top = 20.dp, bottom = 55.dp)) {
-                items(items = list, itemContent = { item ->
+            LazyColumn(
+                modifier = Modifier
+                    .padding(top = 20.dp, bottom = 55.dp)
+                    .fillMaxWidth()
+            ) {
+                items(items = playlist.videoList, itemContent = { item ->
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
                     ) {
-                        Box(modifier = Modifier
-                            .clip(RoundedCornerShape(12, 12, 5, 5))
-                            .align(CenterHorizontally)
-                            .clickable {
-                                navController.navigate(ScreenRoutes.VideoScreen.route)
-                            }
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12, 12, 5, 5))
+                                .align(CenterHorizontally)
                         ) {
                             Row(
                                 modifier = Modifier
                                     .padding(start = 0.dp, bottom = 10.dp)
                                     .clip(RoundedCornerShape(12, 12, 5, 5))
                                     .clickable {
-                                        navController.navigate(ScreenRoutes.VideoScreen.route)
+                                        if (item != null) {
+                                            navController.navigate(  // navigates to video screen
+                                                "video_screen"
+                                                        + "?bottomBar_pic=" + item?.videoID.toString()
+                                                        + "&bottomBar_title=" +
+                                                        URLEncoder.encode( // encode to pass "&" character
+                                                            item?.videoTitle.toString(),
+                                                            StandardCharsets.UTF_8.toString()
+                                                        )
+                                                        + "&playlist_id=" + playlist.playlistID
+                                                        + "&playlist_index=" + playlist.videoList.indexOf(item)
+                                            )
+                                        }
                                     }
                             ) { // Video Display
-                                AsyncImage( // Video thumbnail
-                                    model = fullsize_path_img,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .size(width = 140.dp, height = 87.dp)
-                                        .clip(RoundedCornerShape(12))
-                                        .align(CenterVertically)
-                                        .clickable {
-                                            navController.navigate(ScreenRoutes.VideoScreen.route)
-                                        }
-                                )
-                                Text( // Video name
-                                    text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
-                                    maxLines = 4,
-                                    modifier = Modifier
-                                        .padding(start = 8.dp)
-                                        .width(130.dp)
-                                        .height(80.dp)
-                                        .align(CenterVertically),
-                                    //.border(border = BorderStroke(2.dp, Color.Red)),
-                                    fontSize = 13.sp,
-                                    fontFamily = montserrat_light
-                                )
+                                if (item != null) {
+                                    AsyncImage( // Video thumbnail
+                                        model = "https://img.youtube.com/vi/" + item.videoID + "/maxres2.jpg",
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(width = 140.dp, height = 87.dp)
+                                            .clip(RoundedCornerShape(12))
+                                            .align(CenterVertically)
+                                    )
+                                }
+                                if (item != null) {
+                                    Text( // Video name
+                                        text = item.videoTitle,
+                                        maxLines = 4,
+                                        modifier = Modifier
+                                            .padding(start = 8.dp)
+                                            .width(130.dp)
+                                            .height(80.dp)
+                                            .align(CenterVertically),
+                                        //.border(border = BorderStroke(2.dp, Color.Red)),
+                                        fontSize = 13.sp,
+                                        fontFamily = montserrat_light
+                                    )
+                                }
                             }
                         }
                     }
@@ -191,51 +299,76 @@ fun PlaylistScreen(navController: NavController) {
         },
         bottomBar = {
             // Bottom bar (Displays what video is played)
-            BottomNavigation(
-                modifier = Modifier
-                    .clickable {
-                        navController.navigate(ScreenRoutes.VideoScreen.route)
-                    },
-                backgroundColor = Color(0xFF3392EA)
-            ) {
-                Row() { // wrap in row to avoid default spacing
-                    AsyncImage( // video thumbnail
-                        model = fullsize_path_img,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
+            if (!bottomBar_title.equals("")) {
+                Column() {
+                    Row(
                         modifier = Modifier
-                            .padding(start = 16.dp, top = 6.dp)
-                            .size(width = 65.dp, height = 43.dp)
-                            .clip(RoundedCornerShape(12))
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(width = 140.dp, height = 53.dp)
-                            .padding(top = 3.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Text( // video name
-                            text = "lofi hip hop radio \uD83D\uDCDA - beats to relax/study to",
-                            fontFamily = montserrat_bold,
-                            color = Color.White,
+                        BottomNavigation(
                             modifier = Modifier
-                                .padding(start = 12.dp)
-                                .fillMaxSize(),
-                            fontSize = 10.sp
-                        )
+                                .clip(RoundedCornerShape(12))
+                                .clickable {
+                                    navController.navigate(
+                                        "video_screen"
+                                                + "?bottomBar_pic=" + bottomBar_pic
+                                                + "&bottomBar_title=" +
+                                                URLEncoder.encode( // encode to pass "&" and "/" characters
+                                                    bottomBar_title,
+                                                    StandardCharsets.UTF_8.toString()
+                                                )
+                                                + "&playlist_name=" + "none"
+                                                + "&playlist_index=" + "-1"
+                                    )
+                                }
+                                .fillMaxWidth(.95f),
+                            backgroundColor = Color(0xFF3392EA),
+                        ) {
+                            Log.d(
+                                "video playing",
+                                "playlist_screen: playing: " + bottomBar_title + " " + bottomBar_pic
+                            )
+                            Row(modifier = Modifier.fillMaxHeight()) { // wrap in row to avoid default spacing
+                                Spacer(modifier = Modifier.width(16.dp))
+                                AsyncImage( // video thumbnail
+                                    model = "https://img.youtube.com/vi/$bottomBar_pic/maxres2.jpg",
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(width = 65.dp, height = 43.dp)
+                                        .clip(RoundedCornerShape(12))
+                                        .align(Alignment.CenterVertically)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(
+                                    modifier = Modifier
+                                        .align(Alignment.CenterVertically)
+                                        .fillMaxWidth(.90f)
+                                        .fillMaxHeight(.95f),
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text( // video name (decodes title)
+                                        text = URLDecoder.decode(
+                                            bottomBar_title,
+                                            StandardCharsets.UTF_8.toString()
+                                        ),
+                                        fontFamily = montserrat_bold,
+                                        color = Color.White,
+                                        modifier = Modifier
+                                            .basicMarquee(),
+                                        fontSize = 14.sp,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
                     }
+                    Spacer(
+                        modifier = Modifier
+                            .height(5.dp)
+                    )
                 }
-                Image( // play icon (note: make this a button)
-                    painter = painterResource(R.drawable.play_circle_icon),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .padding(top = 4.dp, end = 16.dp)
-                        .size(45.dp)
-                        .clip(RoundedCornerShape(75, 75, 75, 75))
-                        .clickable {
-                            navController.navigate(ScreenRoutes.VideoScreen.route)
-                        },
-                    colorFilter = ColorFilter.tint(color = Color.White)
-                )
             }
         }
     )
@@ -276,7 +409,12 @@ fun PlaylistScreen(navController: NavController) {
 
                         // yes button
                         Button(
-                            onClick = { navController.navigate(ScreenRoutes.HomeScreen.route) },
+                            onClick = {
+                                getPlaylist = false
+                                FirebaseDatabase.getInstance().getReference("playlists")
+                                    .child(playlist_path).removeValue()
+                                navBack()
+                            },
                             modifier = Modifier
                                 .padding(top = 150.dp, end = 150.dp)
                                 .size(100.dp, 60.dp)
@@ -323,8 +461,3 @@ fun PlaylistScreen(navController: NavController) {
         }
     }
 }
-
-
-
-
-

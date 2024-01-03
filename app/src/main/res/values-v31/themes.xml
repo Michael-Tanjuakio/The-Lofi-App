@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <style name="Theme.Lofiapp" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:statusBarColor">#24CAAC</item>
         <item name="android:navigationBarColor">#24CAAC</item>
         <item name="android:windowBackground">#24CAAC</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/add_new_icon</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/transparent_image</item>
     </style>
 </resources>
