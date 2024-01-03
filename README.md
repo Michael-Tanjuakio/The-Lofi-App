@@ -4,7 +4,7 @@ Ever wanted to have a simple place to have study music available? Introducing th
 Serach through study videos, create customizable playlists, or even play a random study video.
 
 # Team
-This application is built by 2 people team as a personal project.
+This application was made as a personal project by a team of 2 people.
 1. Michael Tanjuakio
 2. Laura Villarreal
 
